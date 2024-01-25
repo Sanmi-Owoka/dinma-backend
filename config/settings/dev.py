@@ -3,6 +3,8 @@ import dj_database_url
 
 from .base import *
 
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
 DATABASES = {
     "default": dj_database_url.parse(os.getenv("DATABASE_URL"), conn_max_age=600)
 }

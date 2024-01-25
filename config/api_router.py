@@ -1,6 +1,6 @@
 from rest_framework.routers import DefaultRouter, SimpleRouter
 from django.conf import settings
-from authentication.patient_authentication_views.views import (
+from authentication.views.patient_authentication_views import (
     PatientAuthenticationViewSet,
 )
 

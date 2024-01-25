@@ -1,7 +1,11 @@
 import datetime
+import uuid
 
+from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.core.mail import EmailMessage
+from django.template.loader import render_to_string
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -9,26 +13,29 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from authentication.patient_authentication_serializers.serializers import (
+from authentication.models import PasswordReset, User
+from authentication.serializers.patient_authentication_serializers import (
     ChangePasswordSerializer,
     CreatePatientProfileSerializer,
+    ForgotPasswordSerializer,
     PatientLoginSerializer,
 )
-from utility.functools import (  # check_fields_required,;
+from utility.functools import (
+    check_fields_required,
     convert_serializer_errors_from_dict_to_list,
     convert_success_message,
     convert_to_error_message,
     convert_to_success_message_serialized_data,
+    decrypt,
     decrypt_user_data,
     encrypt,
     get_specific_user_with_email,
 )
 
-from ..models import User
-
 
 class PatientAuthenticationViewSet(GenericViewSet):
     queryset = User.objects.all()
+    serializer_class = CreatePatientProfileSerializer
 
     def get_queryset(self):
         return User.objects.filter(id=self.request.user.id)
@@ -269,6 +276,137 @@ class PatientAuthenticationViewSet(GenericViewSet):
                 convert_success_message("Password updated successfully"),
                 status=status.HTTP_200_OK,
             )
+
+        except KeyError as e:
+            return Response(
+                convert_to_error_message(f"{e}"), status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_name="user_forgot_password_request",
+        permission_classes=[AllowAny],
+    )
+    def forgot_password_request(self, request):
+        try:
+            email = request.data["email"]
+            check_required = check_fields_required({"email": email})
+            if not check_required["status"]:
+                return Response(
+                    convert_to_error_message(check_required["response"]),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            get_user = get_specific_user_with_email(email.lower())
+            if not get_user["status"]:
+                return Response(
+                    convert_to_error_message(get_user["response"]),
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            user = get_user["response"]
+
+            token = "{}".format(uuid.uuid4().int >> 90)
+            token = token[:6]
+            PasswordReset.objects.filter(user=user).delete()
+            get = PasswordReset.objects.create(user=user, token=token)
+
+            # try:
+            subject = "Password Reset code"
+            from_email = settings.DEFAULT_FROM_EMAIL
+            body = render_to_string(
+                "email/password_reset.html",
+                {
+                    "token": token,
+                    "first_name": decrypt(user.first_name),
+                    "last_name": decrypt(user.last_name),
+                },
+            )
+            message = EmailMessage(
+                subject,
+                body,
+                to=[user.email],
+                from_email=from_email,
+            )
+            message.content_subtype = "html"
+            message.send(fail_silently=True)
+            get.sent = True
+            get.save()
+
+            response = {
+                "message": "Password Reset request successful",
+                "token": token,
+            }
+
+            return Response(
+                convert_to_success_message_serialized_data(response),
+                status=status.HTTP_200_OK,
+            )
+
+        except KeyError as e:
+            return Response(
+                convert_to_error_message(f"{e}"), status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_name="confirm_forgot_password",
+        serializer_class=ForgotPasswordSerializer,
+        permission_classes=[AllowAny],
+    )
+    def confirm_forgot_password(self, request):
+        try:
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(serialized_input.errors),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            token = serialized_input.validated_data["token"]
+            new_password = serialized_input.validated_data["new_password"]
+            confirm_password = serialized_input.validated_data["confirm_password"]
+
+            get_record_of_password_reset = PasswordReset.objects.get(token=token)
+            user = get_record_of_password_reset.user
+
+            if new_password != confirm_password:
+                return Response(
+                    convert_to_error_message(
+                        "Password Mismatch, check your new password and confirm password entered"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Validate user's password with django validators
+            try:
+                validate_password(password=new_password, user=user)
+            except ValidationError as err:
+                return Response(
+                    convert_to_error_message(err), status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user.set_password(new_password)
+            user.save()
+
+            get_record_of_password_reset.delete()
+
+            return Response(
+                convert_success_message("Password updated successfully"),
+                status=status.HTTP_200_OK,
+            )
+
+        except PasswordReset.DoesNotExist:
+            return Response(convert_to_error_message("Invalid Token entered"))
 
         except KeyError as e:
             return Response(

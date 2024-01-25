@@ -115,3 +115,35 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
             "new_password",
             "confirm_password",
         ]
+
+
+class ForgotPasswordSerializer(serializers.ModelSerializer):
+    token = serializers.CharField(
+        required=True,
+        max_length=150,
+        min_length=4,
+        trim_whitespace=True,
+        write_only=True,
+    )
+    new_password = serializers.CharField(
+        required=True,
+        max_length=150,
+        min_length=4,
+        trim_whitespace=True,
+        write_only=True,
+    )
+    confirm_password = serializers.CharField(
+        required=True,
+        max_length=150,
+        min_length=4,
+        trim_whitespace=True,
+        write_only=True,
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "token",
+            "new_password",
+            "confirm_password",
+        ]
