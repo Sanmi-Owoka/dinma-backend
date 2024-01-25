@@ -11,15 +11,12 @@ from rest_framework.viewsets import GenericViewSet
 from authentication.patient_authentication_serializers.serializers import (
     CreatePatientProfileSerializer,
 )
-from utility.functools import (
-    check_fields_required,
+from utility.functools import (  # check_fields_required,; convert_success_message,; get_specific_user_with_email,
     convert_serializer_errors_from_dict_to_list,
-    convert_success_message,
     convert_to_error_message,
     convert_to_success_message_serialized_data,
     decrypt,
     encrypt,
-    get_specific_user_with_email,
 )
 
 from ..models import User
@@ -101,11 +98,6 @@ class PatientAuthenticationViewSet(GenericViewSet):
 
             new_user.set_password(password)
             new_user.save()
-
-            first_name = decrypt(new_user.first_name)
-            last_name = decrypt(new_user.last_name)
-            addresss = decrypt(new_user.address)
-            city = decrypt(new_user.city)
 
             output_response = {
                 "first_name": decrypt(new_user.first_name),
