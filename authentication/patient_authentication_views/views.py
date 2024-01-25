@@ -31,6 +31,32 @@ class PatientAuthenticationViewSet(GenericViewSet):
     def get_queryset(self):
         return User.objects.filter(id=self.request.user.id)
 
+    @action(methods=["get"], detail=False, url_name="patient_details")
+    def patient_details(self, request):
+        try:
+            user = request.user
+            get_user = get_specific_user_with_email(user.email)
+            if not get_user["status"]:
+                return Response(
+                    convert_to_error_message(get_user["response"]),
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            get_user = get_user["response"]
+            output_response = decrypt_user_data(get_user)
+            return Response(
+                convert_to_success_message_serialized_data(output_response),
+                status=status.HTTP_201_CREATED,
+            )
+
+        except KeyError as e:
+            return Response(
+                convert_to_error_message(f"{e}"), status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
     @action(
         methods=["POST"],
         detail=False,
