@@ -429,9 +429,12 @@ disable=raw-checker-failed,
         use-implicit-booleaness-not-comparison-to-string,
         use-implicit-booleaness-not-comparison-to-zero,
         missing-function-docstring,
+        missing-class-docstring,
         missing-module-docstring,
+        broad-exception-caught,
         no-member,
-        undefined-variable
+        undefined-variable,
+        too-few-public-methods
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

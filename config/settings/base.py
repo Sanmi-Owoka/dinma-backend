@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/3.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
-import os
+import os, datetime
 
 from dotenv import load_dotenv
 
@@ -43,9 +43,14 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "corsheaders",
+    "drf_api_logger",
+    "drf_spectacular",
+    "rest_framework_simplejwt",
 ]
 
-LOCAL_APPS = []
+LOCAL_APPS = [
+    "authentication",
+]
 
 # Application definition
 
@@ -60,6 +65,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "drf_api_logger.middleware.api_logger_middleware.APILoggerMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -81,6 +87,19 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ),
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DATETIME_FORMAT": "%Y-%m-%dT%H:%M:%S.%fZ",
+    # 'DEFAULT_PAGINATION_CLASS': 'ags.utils.functools.StandardResultsSetPagination20',
+    # 'PAGE_SIZE': 20
+}
 
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
@@ -111,6 +130,15 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# password Hashers
+PASSWORD_HASHERS = [
+    # https://docs.djangoproject.com/en/dev/topics/auth/passwords/#using-argon2-with-django
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
+]
+
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 
@@ -131,3 +159,30 @@ STATIC_URL = "/static/"
 
 # CORS HEADERS SETUP
 CORS_ALLOW_ALL_ORIGINS = True
+
+AUTH_USER_MODEL = "authentication.User"
+
+# simple JWT authentication SETUP
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": datetime.timedelta(days=2),
+    "REFRESH_TOKEN_LIFETIME": datetime.timedelta(days=2),
+    "UPDATE_LAST_LOGIN": True,
+    "AUTH_HEADER_TYPES": ("JWT"),
+    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
+    "SIGNING_KEY": SECRET_KEY,
+}
+
+# DRF-API-LOGGER
+DRF_API_LOGGER_DATABASE = True
+DRF_API_LOGGER_SIGNAL = True
+DRF_API_LOGGER_EXCLUDE_KEYS = ["password", "token", "access", "refresh"]
+DRF_API_LOGGER_STATUS_CODES = [400, 404, 429, 500]
+
+# Django spectacular setup
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Dinma-API",
+    "DESCRIPTION": "API documentation for Dinma backend",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    # OTHER SETTINGS
+}

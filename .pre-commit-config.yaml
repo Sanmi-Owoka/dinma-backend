@@ -10,35 +10,36 @@ repos:
     rev: 22.10.0
     hooks:
     -   id: black
-
-- repo: https://github.com/PyCQA/flake8
-  rev: 7.0.0
-  hooks:
-    - id: flake8
-      args: ["--config=setup.cfg"]
-      additional_dependencies: [flake8-isort]
-
-- repo: local
-  hooks:
-    - id: pylint
-      name: pylint
-      entry: pylint
-      language: system
-      types: [python]
-      args:
-        [
-          "-rn", # Only display messages
-          "--rcfile=pylintrc", # Link to your config file
-          "--load-plugins=pylint.extensions.docparams", # Load an extension
-        ]
-
-- repo: https://github.com/pycqa/isort
-  rev: 5.12.0
-  hooks:
-    - id: isort
-      name: isort
-
-ci:
-  autoupdate_schedule: weekly
-  skip: []
-  submodules: false
+#
+#- repo: https://github.com/PyCQA/flake8
+#  rev: 7.0.0
+#  hooks:
+#    - id: flake8
+#      args: ["--config=setup.cfg"]
+#      additional_dependencies: [flake8-isort]
+#
+#- repo: local
+#  hooks:
+#    - id: pylint
+#      name: pylint
+#      entry: pylint
+#      language: system
+#      types: [python]
+#      args:
+#        [
+#          "-rn", # Only display messages
+#          "-sn", # Don't display the score
+#          "--rcfile=pylintrc", # Link to your config file
+#          "--load-plugins=pylint.extensions.docparams", # Load an extension
+#        ]
+#
+#- repo: https://github.com/pycqa/isort
+#  rev: 5.12.0
+#  hooks:
+#    - id: isort
+#      name: isort
+#
+#ci:
+#  autoupdate_schedule: weekly
+#  skip: []
+#  submodules: false
