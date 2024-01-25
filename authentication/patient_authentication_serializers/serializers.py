@@ -83,3 +83,35 @@ class PatientLoginSerializer(serializers.ModelSerializer):
             "email",
             "password",
         ]
+
+
+class ChangePasswordSerializer(serializers.ModelSerializer):
+    existing_password = serializers.CharField(
+        required=True,
+        max_length=150,
+        min_length=4,
+        trim_whitespace=True,
+        write_only=True,
+    )
+    new_password = serializers.CharField(
+        required=True,
+        max_length=150,
+        min_length=4,
+        trim_whitespace=True,
+        write_only=True,
+    )
+    confirm_password = serializers.CharField(
+        required=True,
+        max_length=150,
+        min_length=4,
+        trim_whitespace=True,
+        write_only=True,
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "existing_password",
+            "new_password",
+            "confirm_password",
+        ]

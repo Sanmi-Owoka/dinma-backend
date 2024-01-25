@@ -10,11 +10,13 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from authentication.patient_authentication_serializers.serializers import (
+    ChangePasswordSerializer,
     CreatePatientProfileSerializer,
     PatientLoginSerializer,
 )
-from utility.functools import (  # check_fields_required,; convert_success_message,;
+from utility.functools import (  # check_fields_required,;
     convert_serializer_errors_from_dict_to_list,
+    convert_success_message,
     convert_to_error_message,
     convert_to_success_message_serialized_data,
     decrypt_user_data,
@@ -173,6 +175,12 @@ class PatientAuthenticationViewSet(GenericViewSet):
                 )
             get_user = get_user["response"]
 
+            if get_user.user_type != "patient":
+                return Response(
+                    convert_to_error_message("User not authorized to login"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             if not get_user.check_password(password):
                 return Response(
                     convert_to_error_message("Invalid password"),
@@ -186,6 +194,80 @@ class PatientAuthenticationViewSet(GenericViewSet):
             return Response(
                 convert_to_success_message_serialized_data(response),
                 status=status.HTTP_201_CREATED,
+            )
+
+        except KeyError as e:
+            return Response(
+                convert_to_error_message(f"{e}"), status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_name="change_password",
+        permission_classes=[AllowAny],
+        serializer_class=ChangePasswordSerializer,
+    )
+    def patient_change_password(self, request):
+        try:
+            #  Get the user object
+            user_id = request.user.id
+            user = User.objects.get(id=user_id)
+
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(serialized_input.errors),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Get Input variables
+            existing_password = serialized_input.validated_data["existing_password"]
+            new_password = serialized_input.validated_data["new_password"]
+            confirm_password = serialized_input.validated_data["confirm_password"]
+
+            check_password_valid = user.check_password(existing_password)
+            if not check_password_valid:
+                return Response(
+                    convert_to_error_message("Invalid password entered"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if new_password != confirm_password:
+                return Response(
+                    convert_to_error_message(
+                        "Password Mismatch, check your new password and confirm password entered"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Check user's previous password
+            if existing_password == new_password:
+                return Response(
+                    convert_to_error_message(
+                        "New password is the same with existing password"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Validate user's password with django validators
+            try:
+                validate_password(password=new_password, user=user)
+            except ValidationError as err:
+                return Response(
+                    convert_to_error_message(err), status=status.HTTP_400_BAD_REQUEST
+                )
+
+            user.set_password(new_password)
+            user.save()
+
+            return Response(
+                convert_success_message("Password updated successfully"),
+                status=status.HTTP_200_OK,
             )
 
         except KeyError as e:
