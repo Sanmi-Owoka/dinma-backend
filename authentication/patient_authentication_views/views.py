@@ -7,16 +7,19 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from authentication.patient_authentication_serializers.serializers import (
     CreatePatientProfileSerializer,
+    PatientLoginSerializer,
 )
-from utility.functools import (  # check_fields_required,; convert_success_message,; get_specific_user_with_email,
+from utility.functools import (  # check_fields_required,; convert_success_message,;
     convert_serializer_errors_from_dict_to_list,
     convert_to_error_message,
     convert_to_success_message_serialized_data,
-    decrypt,
+    decrypt_user_data,
     encrypt,
+    get_specific_user_with_email,
 )
 
 from ..models import User
@@ -66,7 +69,6 @@ class PatientAuthenticationViewSet(GenericViewSet):
             date_of_birth = serialized_input.validated_data["date_of_birth"]
             user_dob_date = datetime.datetime.strptime(date_of_birth, "%Y-%m-%d").date()
 
-            print(encrypt(serialized_input.validated_data["address"].capitalize()))
             new_user = User(
                 first_name=encrypt(
                     serialized_input.validated_data["first_name"].capitalize()
@@ -99,25 +101,64 @@ class PatientAuthenticationViewSet(GenericViewSet):
             new_user.set_password(password)
             new_user.save()
 
-            output_response = {
-                "first_name": decrypt(new_user.first_name),
-                "last_name": decrypt(new_user.last_name),
-                "email": new_user.email,
-                "phone_number": new_user.phone_number,
-                "address": decrypt(new_user.address),
-                "city": decrypt(new_user.city),
-                "country": new_user.country,
-                "gender": new_user.gender,
-                "state": new_user.state,
-                "date_of_birth": new_user.date_of_birth.strftime("%d/%m/%Y"),
-                "preferred_communication": new_user.preferred_communication,
-                "user_type": new_user.user_type,
-                "date_joined": new_user.date_joined.strftime("%d/%m/%Y, %H:%M:%S"),
-            }
+            output_response = decrypt_user_data(new_user)
 
-            print(output_response)
             return Response(
                 convert_to_success_message_serialized_data(output_response),
+                status=status.HTTP_201_CREATED,
+            )
+
+        except KeyError as e:
+            return Response(
+                convert_to_error_message(f"{e}"), status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_name="patient_Login",
+        permission_classes=[AllowAny],
+        serializer_class=PatientLoginSerializer,
+    )
+    def patient_Login(self, request):
+        try:
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(
+                        convert_serializer_errors_from_dict_to_list(
+                            serialized_input.errors
+                        )
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            email = serialized_input.validated_data["email"]
+            password = serialized_input.validated_data["password"]
+
+            get_user = get_specific_user_with_email(email.lower())
+            if not get_user["status"]:
+                return Response(
+                    convert_to_error_message(get_user["response"]),
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            get_user = get_user["response"]
+
+            if not get_user.check_password(password):
+                return Response(
+                    convert_to_error_message("Invalid password"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user = decrypt_user_data(get_user)
+
+            token = RefreshToken.for_user(get_user)
+            response = {"user": user, "token": str(token.access_token)}
+
+            return Response(
+                convert_to_success_message_serialized_data(response),
                 status=status.HTTP_201_CREATED,
             )
 

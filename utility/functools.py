@@ -79,3 +79,22 @@ def convert_to_success_message_serialized_data(serialized_data: dict) -> dict:
 
 def convert_success_message(message: str) -> dict:
     return {"status": "success", "message": message, "data": "null"}
+
+
+def decrypt_user_data(user_data: User) -> dict:
+    output_response = {
+        "first_name": decrypt(user_data.first_name),
+        "last_name": decrypt(user_data.last_name),
+        "email": user_data.email,
+        "phone_number": user_data.phone_number,
+        "address": decrypt(user_data.address),
+        "city": decrypt(user_data.city),
+        "country": user_data.country,
+        "gender": user_data.gender,
+        "state": user_data.state,
+        "date_of_birth": user_data.date_of_birth.strftime("%d/%m/%Y"),
+        "preferred_communication": user_data.preferred_communication,
+        "user_type": user_data.user_type,
+        "date_joined": user_data.date_joined.strftime("%d/%m/%Y, %H:%M:%S"),
+    }
+    return output_response

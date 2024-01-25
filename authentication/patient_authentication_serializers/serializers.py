@@ -69,3 +69,17 @@ class CreatePatientProfileSerializer(serializers.ModelSerializer):
             "id",
             "date_joined",
         ]
+
+
+class PatientLoginSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True)
+    password = serializers.CharField(
+        required=True, max_length=150, trim_whitespace=True
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "email",
+            "password",
+        ]
