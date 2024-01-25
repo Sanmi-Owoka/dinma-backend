@@ -3,7 +3,7 @@ argon2-cffi-bindings==21.2.0
 asgiref==3.7.2
 astroid==3.0.2
 attrs==23.2.0
-backports.zoneinfo==0.2.1
+backports.zoneinfo;python_version<"3.9"
 bleach==6.1.0
 cffi==1.16.0
 cfgv==3.4.0
