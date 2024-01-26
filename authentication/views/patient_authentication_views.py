@@ -423,7 +423,7 @@ class PatientAuthenticationViewSet(GenericViewSet):
         url_name="edit_patient_profile",
         permission_classes=[IsAuthenticated],
     )
-    def edit_patient_profile(self, request):
+    def edit_profile(self, request):
         try:
             logged_in_user = User.objects.get(id=request.user.id)
 
