@@ -21,6 +21,7 @@ from authentication.serializers.patient_authentication_serializers import (
     PatientLoginSerializer,
 )
 from utility.functools import (
+    base64_to_data,
     check_fields_required,
     convert_serializer_errors_from_dict_to_list,
     convert_success_message,
@@ -51,6 +52,7 @@ class PatientAuthenticationViewSet(GenericViewSet):
                     status=status.HTTP_404_NOT_FOUND,
                 )
             get_user = get_user["response"]
+
             output_response = decrypt_user_data(get_user)
             return Response(
                 convert_to_success_message_serialized_data(output_response),
@@ -465,6 +467,8 @@ class PatientAuthenticationViewSet(GenericViewSet):
                 logged_in_user.preferred_language = request.data.get(
                     "preferred_language"
                 )
+            if request.data.get("photo"):
+                logged_in_user.photo = base64_to_data(request.data.get("photo"))
 
             # save partial update
             logged_in_user.save()
