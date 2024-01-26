@@ -8,7 +8,7 @@ from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -102,7 +102,7 @@ class PatientAuthenticationViewSet(GenericViewSet):
                 )
 
             date_of_birth = serialized_input.validated_data["date_of_birth"]
-            user_dob_date = datetime.datetime.strptime(date_of_birth, "%Y-%m-%d").date()
+            user_dob_date = datetime.datetime.strptime(date_of_birth, "%d-%m-%Y").date()
 
             new_user = User(
                 first_name=encrypt(
@@ -407,6 +407,72 @@ class PatientAuthenticationViewSet(GenericViewSet):
 
         except PasswordReset.DoesNotExist:
             return Response(convert_to_error_message("Invalid Token entered"))
+
+        except KeyError as e:
+            return Response(
+                convert_to_error_message(f"{e}"), status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["PUT"],
+        detail=False,
+        url_name="edit_patient_profile",
+        permission_classes=[IsAuthenticated],
+    )
+    def edit_profile(self, request):
+        try:
+            logged_in_user = User.objects.get(id=request.user.id)
+
+            if request.data.get("first_name"):
+                logged_in_user.first_name = encrypt(
+                    request.data.get("first_name").capitalize().strip()
+                )
+            if request.data.get("last_name"):
+                logged_in_user.last_name = encrypt(
+                    request.data.get("last_name").capitalize().strip()
+                )
+            if request.data.get("address"):
+                logged_in_user.address = encrypt(
+                    request.data.get("address").lower().strip()
+                )
+            if request.data.get("date_of_birth"):
+                date_of_birth = request.data.get("date_of_birth")
+                user_dob_date = datetime.datetime.strptime(
+                    date_of_birth, "%d-%m-%Y"
+                ).date()
+                logged_in_user.date_of_birth = user_dob_date
+            if request.data.get("gender"):
+                logged_in_user.gender = request.data.get("gender").lower().strip()
+            if request.data.get("city"):
+                logged_in_user.city = encrypt(
+                    request.data.get("city").capitalize().strip()
+                )
+            if request.data.get("state"):
+                logged_in_user.state = request.data.get("state").capitalize().strip()
+            if request.data.get("country"):
+                logged_in_user.country = (
+                    request.data.get("country").capitalize().strip()
+                )
+            if request.data.get("language_spoken"):
+                logged_in_user.language_spoken = request.data.get(
+                    "language_spoken"
+                ).strip()
+            if request.data.get("preferred_language"):
+                logged_in_user.preferred_language = request.data.get(
+                    "preferred_language"
+                )
+
+            # save partial update
+            logged_in_user.save()
+            response = decrypt_user_data(logged_in_user)
+            return Response(
+                convert_to_success_message_serialized_data(response),
+                status=status.HTTP_200_OK,
+            )
 
         except KeyError as e:
             return Response(
