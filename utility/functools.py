@@ -83,9 +83,9 @@ def convert_success_message(message: str) -> dict:
     return {"status": "success", "message": message, "data": "null"}
 
 
-def decrypt_user_data(user_data: User) -> dict:
+def decrypt_user_data(user_data: User, request) -> dict:
     if user_data.photo:
-        photo = "http://127.0.0.1:8000" + user_data.photo.url
+        photo = request.build_absolute_uri(user_data.photo.url)
     else:
         photo = None
     output_response = {
