@@ -1,3 +1,4 @@
+import os
 import uuid
 
 from django.contrib.auth.models import AbstractUser
@@ -9,7 +10,14 @@ from django.utils import timezone
 from .base_model import BaseModel
 
 
+def get_avatar_upload_path(instance, filename):
+    return os.path.join("emails/{}/{}".format(instance.email, filename))
+
+
 class User(AbstractUser):
+
+    # added Photo Field
+    photo = models.ImageField(null=True, upload_to=get_avatar_upload_path)
     USER_TYPE_CHOICES = (
         ("patient", "patient"),
         ("health_provider", "health_provider"),

@@ -2,6 +2,8 @@ import base64
 
 from cryptography.fernet import Fernet
 from django.conf import settings
+from django.core.files.base import ContentFile
+from django.utils import timezone
 
 from authentication.models import User
 
@@ -82,6 +84,10 @@ def convert_success_message(message: str) -> dict:
 
 
 def decrypt_user_data(user_data: User) -> dict:
+    if user_data.photo:
+        photo = "http://127.0.0.1:8000" + user_data.photo.url
+    else:
+        photo = None
     output_response = {
         "first_name": decrypt(user_data.first_name),
         "last_name": decrypt(user_data.last_name),
@@ -96,5 +102,14 @@ def decrypt_user_data(user_data: User) -> dict:
         "preferred_communication": user_data.preferred_communication,
         "user_type": user_data.user_type,
         "date_joined": user_data.date_joined.strftime("%d/%m/%Y, %H:%M:%S"),
+        "photo": photo,
     }
     return output_response
+
+
+def base64_to_data(base64_data):
+    format, imgstr = base64_data.split(";base64,")
+    ext = format.split("/")[-1]
+    suffix = timezone.now().strftime("%y%m%d_%H%M%S")
+    data = ContentFile(base64.b64decode(imgstr), name="upload{}.".format(suffix) + ext)
+    return data
