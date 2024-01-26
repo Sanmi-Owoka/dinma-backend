@@ -53,7 +53,8 @@ class PatientAuthenticationViewSet(GenericViewSet):
                 )
             get_user = get_user["response"]
 
-            output_response = decrypt_user_data(get_user)
+            output_response = decrypt_user_data(get_user, request)
+
             return Response(
                 convert_to_success_message_serialized_data(output_response),
                 status=status.HTTP_201_CREATED,
@@ -138,7 +139,7 @@ class PatientAuthenticationViewSet(GenericViewSet):
             new_user.set_password(password)
             new_user.save()
 
-            output_response = decrypt_user_data(new_user)
+            output_response = decrypt_user_data(new_user, request)
 
             return Response(
                 convert_to_success_message_serialized_data(output_response),
@@ -195,7 +196,7 @@ class PatientAuthenticationViewSet(GenericViewSet):
                     convert_to_error_message("Invalid password"),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            user = decrypt_user_data(get_user)
+            user = decrypt_user_data(get_user, request)
 
             token = RefreshToken.for_user(get_user)
             response = {"user": user, "token": str(token.access_token)}
@@ -472,7 +473,7 @@ class PatientAuthenticationViewSet(GenericViewSet):
 
             # save partial update
             logged_in_user.save()
-            response = decrypt_user_data(logged_in_user)
+            response = decrypt_user_data(logged_in_user, request)
             return Response(
                 convert_to_success_message_serialized_data(response),
                 status=status.HTTP_200_OK,
