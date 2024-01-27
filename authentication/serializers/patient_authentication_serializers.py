@@ -21,7 +21,6 @@ class CreatePatientProfileSerializer(serializers.ModelSerializer):
     gender = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
     city = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
     state = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
-    country = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
     preferred_communication = serializers.CharField(
         required=True, max_length=255, trim_whitespace=True
     )
@@ -59,7 +58,6 @@ class CreatePatientProfileSerializer(serializers.ModelSerializer):
             "gender",
             "city",
             "state",
-            "country",
             "preferred_communication",
             "languages_spoken",
             "password",
