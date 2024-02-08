@@ -192,8 +192,6 @@ SPECTACULAR_SETTINGS = {
     # OTHER SETTINGS
 }
 
-DEFAULT_FROM_EMAIL = "info@dinma.com"
-
 CSRF_COOKIE_HTTPONLY = True
 
 STATIC_URL = "/static/"
@@ -207,3 +205,15 @@ STATICFILES_FINDERS = [
 MEDIA_URL = "/media/"
 # MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 MEDIA_ROOT = str(f"{APPS_DIR}/ media")
+
+# SENGRID SETUP
+
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.sendgrid.net"
+EMAIL_HOST_USER = "apikey"  # this is exactly the value 'apikey'
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+EMAIL_HOST_PASSWORD = SENDGRID_API_KEY
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
