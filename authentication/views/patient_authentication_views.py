@@ -41,7 +41,7 @@ class PatientAuthenticationViewSet(GenericViewSet):
     def get_queryset(self):
         return User.objects.filter(id=self.request.user.id)
 
-    @action(methods=["get"], detail=False, url_name="patient_details")
+    @action(methods=["GET"], detail=False, url_name="patient_details")
     def patient_details(self, request):
         try:
             user = request.user
@@ -341,7 +341,6 @@ class PatientAuthenticationViewSet(GenericViewSet):
 
             response = {
                 "message": "Password Reset request successful",
-                "token": token,
             }
 
             return Response(
