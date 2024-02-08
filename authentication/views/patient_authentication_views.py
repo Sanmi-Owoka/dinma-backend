@@ -341,7 +341,6 @@ class PatientAuthenticationViewSet(GenericViewSet):
 
             response = {
                 "message": "Password Reset request successful",
-                "token": token,
             }
 
             return Response(
