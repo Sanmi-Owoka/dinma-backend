@@ -17,7 +17,7 @@ from authentication.models import (
 from authentication.serializers.provider_authentication_serializers import (
     OnboardPractionerSerializer,
 )
-from utility.functools import (
+from utility.helpers.functools import (
     convert_serializer_errors_from_dict_to_list,
     convert_to_error_message,
     convert_to_success_message_serialized_data,

@@ -1,4 +1,5 @@
 import base64
+import uuid
 
 from cryptography.fernet import Fernet
 from django.conf import settings
@@ -113,3 +114,12 @@ def base64_to_data(base64_data):
     suffix = timezone.now().strftime("%y%m%d_%H%M%S")
     data = ContentFile(base64.b64decode(imgstr), name="upload{}.".format(suffix) + ext)
     return data
+
+
+def generate_unique_id(model):
+    generate_id = uuid.uuid4()
+    exists = model.objects.filter(token=generate_id).exists()
+    while exists:
+        generate_id = uuid.uuid4()
+        exists = model.objects.filter(token=generate_id).exists()
+    return generate_id
