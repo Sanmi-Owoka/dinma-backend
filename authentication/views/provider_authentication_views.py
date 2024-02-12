@@ -2,6 +2,7 @@ import datetime
 
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -27,6 +28,7 @@ from utility.functools import (
 # from rest_framework_simplejwt.tokens import RefreshToken
 
 
+@extend_schema(tags=["Practitioner authentication endpoints"])
 class PractionerViewSet(GenericViewSet):
     permission_classes = [IsAuthenticated]
     queryset = User.objects.all()
