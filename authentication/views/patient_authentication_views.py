@@ -41,6 +41,7 @@ from utility.helpers.functools import (
     decrypt,
     decrypt_user_data,
     encrypt,
+    generate_unique_id,
     get_specific_user_with_email,
 )
 from utility.helpers.send_sms import send_plain_SMS
@@ -613,6 +614,7 @@ class PatientAuthenticationViewSet(GenericViewSet):
 
             PhoneNumberVerification.objects.filter(phone_number=phone_number).delete()
             phone_verification_obj = PhoneNumberVerification.objects.create(
+                id=generate_unique_id(PhoneNumberVerification),
                 phone_number=phone_number,
                 token=token,
             )
@@ -634,6 +636,45 @@ class PatientAuthenticationViewSet(GenericViewSet):
             print("error", e)
             return Response({"message": [f"{e}"]}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, methods=["GET"], permission_classes=[AllowAny])
-    def status(self, request):
-        return Response({"message": "welcome to Dinma Service. Service running..."})
+    @action(detail=False, methods=["POST"], permission_classes=[AllowAny])
+    def confirm_phone_number_verification(self, request):
+        try:
+            token = request.data["token"]
+            if not token:
+                return Response(
+                    convert_to_error_message("Token is required"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            # check email confirmation with token
+            confirm_phone_verification = PhoneNumberVerification.objects.filter(
+                token=token
+            )
+            if not confirm_phone_verification.exists():
+                return Response(
+                    convert_to_error_message("Invalid Phone verification code entered"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            confirm_phone_verification = confirm_phone_verification.first()
+
+            # Check if token has expired
+            if confirm_phone_verification.check_expire:
+                return Response(
+                    convert_to_error_message("token expired"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            confirm_phone_verification.is_verified = True
+            confirm_phone_verification.save()
+
+            return Response(
+                convert_success_message("Phone number verified successfully"),
+                status=status.HTTP_200_OK,
+            )
+        except KeyError as e:
+            print("error", e)
+            return Response(
+                {"message": [f"{e} is required"]}, status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            print("error", e)
+            return Response({"message": [f"{e}"]}, status=status.HTTP_400_BAD_REQUEST)
