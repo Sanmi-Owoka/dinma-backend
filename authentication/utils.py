@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 
-from authentication.models import EmailConfirmation
+from authentication.models import EmailConfirmation, PhoneNumberVerification
 
 
 def generate_code(num):
@@ -18,6 +18,15 @@ def generate_unique_code():
     while exists:
         code = generate_code(6)
         exists = EmailConfirmation.objects.filter(token=code).exists()
+    return code
+
+
+def generate_phone_unique_code():
+    code = generate_code(6)
+    exists = PhoneNumberVerification.objects.filter(token=code).exists()
+    while exists:
+        code = generate_code(6)
+        exists = PhoneNumberVerification.objects.filter(token=code).exists()
     return code
 
 

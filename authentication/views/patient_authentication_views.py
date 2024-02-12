@@ -14,15 +14,24 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from authentication.models import EmailConfirmation, PasswordReset, User
+from authentication.models import (
+    EmailConfirmation,
+    PasswordReset,
+    PhoneNumberVerification,
+    User,
+)
 from authentication.serializers.patient_authentication_serializers import (
     ChangePasswordSerializer,
     CreatePatientProfileSerializer,
     ForgotPasswordSerializer,
     PatientLoginSerializer,
 )
-from authentication.utils import generate_unique_code, send_email_verification
-from utility.functools import (
+from authentication.utils import (
+    generate_phone_unique_code,
+    generate_unique_code,
+    send_email_verification,
+)
+from utility.helpers.functools import (
     base64_to_data,
     check_fields_required,
     convert_serializer_errors_from_dict_to_list,
@@ -34,6 +43,7 @@ from utility.functools import (
     encrypt,
     get_specific_user_with_email,
 )
+from utility.helpers.send_sms import send_plain_SMS
 
 
 @extend_schema(tags=["Patient authentication endpoints"])
@@ -569,6 +579,50 @@ class PatientAuthenticationViewSet(GenericViewSet):
 
             return Response(
                 convert_success_message("Email verified successfully"),
+                status=status.HTTP_200_OK,
+            )
+        except KeyError as e:
+            print("error", e)
+            return Response(
+                {"message": [f"{e} is required"]}, status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            print("error", e)
+            return Response({"message": [f"{e}"]}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=["POST"], detail=False, permission_classes=[AllowAny])
+    def send_phone_verification(self, request):
+        try:
+            phone_number = request.data["phone_number"]
+            if not phone_number:
+                return Response(
+                    convert_to_error_message("Phone number is required"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            token = generate_phone_unique_code()
+
+            check_phone_verification = PhoneNumberVerification.objects.filter(
+                phone_number=phone_number,
+                is_verified=True,
+            )
+            if check_phone_verification.exists():
+                return Response(
+                    convert_to_error_message("Phone number already verified"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            PhoneNumberVerification.objects.filter(phone_number=phone_number).delete()
+            phone_verification_obj = PhoneNumberVerification.objects.create(
+                phone_number=phone_number,
+                token=token,
+            )
+            message_text = f"Your Dinma confirmation code is {token}"
+            new_message = send_plain_SMS(phone_number, message_text)
+            print(new_message)
+            phone_verification_obj.sent = True
+            phone_verification_obj.save()
+            return Response(
+                convert_success_message("Phone number verification sent successfully"),
                 status=status.HTTP_200_OK,
             )
         except KeyError as e:

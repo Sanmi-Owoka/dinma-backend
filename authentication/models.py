@@ -108,11 +108,27 @@ class EmailConfirmation(BaseModel):
 
 
 class PhoneNumberVerification(BaseModel):
-    user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name="user_phone_verification_code"
+    phone_regex = RegexValidator(
+        regex=r"^\+?1?\d{9,15}$",
+        message="Phone number must be entered in the format:"
+        " '+999999999'. Up to 15 digits allowed.",
+    )
+    phone_number = models.CharField(
+        validators=[phone_regex], max_length=800, null=True, blank=True
     )
     token = models.CharField(max_length=9, unique=True)
     is_verified = models.BooleanField(default=False)
+    sent = models.BooleanField(default=False)
+
+    @property
+    def check_expire(self):
+        diff = timezone.now() - self.created_at
+        days, seconds = diff.days, diff.seconds
+        hours = days * 72 + seconds // 3600
+        if hours < 0:
+            return True
+        else:
+            return False
 
 
 class ProviderQualification(BaseModel):
