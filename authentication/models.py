@@ -51,6 +51,7 @@ class User(AbstractUser):
     user_type = models.CharField(
         max_length=50, choices=USER_TYPE_CHOICES, null=True, blank=True
     )
+    email_verified = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-date_joined"]
@@ -89,12 +90,21 @@ class PasswordReset(BaseModel):
             return False
 
 
-class EmailAddressVerification(BaseModel):
-    user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name="user_email_verification_code"
-    )
+class EmailConfirmation(BaseModel):
+    email = models.EmailField(max_length=254, null=True)
     token = models.CharField(max_length=9, unique=True)
+    sent = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
+
+    @property
+    def check_expire(self):
+        diff = timezone.now() - self.created_at
+        days, seconds = diff.days, diff.seconds
+        hours = days * 72 + seconds // 3600
+        if hours < 0:
+            return True
+        else:
+            return False
 
 
 class PhoneNumberVerification(BaseModel):

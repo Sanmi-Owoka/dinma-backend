@@ -6,6 +6,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -13,13 +14,14 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from authentication.models import PasswordReset, User
+from authentication.models import EmailConfirmation, PasswordReset, User
 from authentication.serializers.patient_authentication_serializers import (
     ChangePasswordSerializer,
     CreatePatientProfileSerializer,
     ForgotPasswordSerializer,
     PatientLoginSerializer,
 )
+from authentication.utils import generate_unique_code, send_email_verification
 from utility.functools import (
     base64_to_data,
     check_fields_required,
@@ -34,6 +36,7 @@ from utility.functools import (
 )
 
 
+@extend_schema(tags=["Patient authentication endpoints"])
 class PatientAuthenticationViewSet(GenericViewSet):
     queryset = User.objects.all()
     serializer_class = CreatePatientProfileSerializer
@@ -378,6 +381,17 @@ class PatientAuthenticationViewSet(GenericViewSet):
             confirm_password = serialized_input.validated_data["confirm_password"]
 
             get_record_of_password_reset = PasswordReset.objects.get(token=token)
+
+            # Check if record of password reset has expired
+            if get_record_of_password_reset.check_expire:
+                get_record_of_password_reset.delete()
+                return Response(
+                    convert_to_error_message(
+                        "Password reset link has expired, please request a new one"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             user = get_record_of_password_reset.user
 
             if new_password != confirm_password:
@@ -481,3 +495,91 @@ class PatientAuthenticationViewSet(GenericViewSet):
             return Response(
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
             )
+
+    @action(detail=False, methods=["POST"], permission_classes=[AllowAny])
+    def send_email_verification(self, request):
+        try:
+            email = request.data["email"]
+            if not email:
+                return Response(
+                    convert_to_error_message("Email is required"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            token = generate_unique_code()
+
+            # Check if email already verified
+            check_email_verification = EmailConfirmation.objects.filter(
+                email=email, is_verified=True
+            )
+            if check_email_verification.exists():
+                return Response(
+                    convert_to_error_message("Email already verified"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            EmailConfirmation.objects.filter(email=email).delete()
+            email_confirmation_obj = EmailConfirmation.objects.create(
+                email=email,
+                token=token,
+            )
+            send_email_verification(email, token)
+            email_confirmation_obj.sent = True
+            email_confirmation_obj.save()
+            return Response(
+                convert_success_message("Email verification sent successfully"),
+                status=status.HTTP_200_OK,
+            )
+        except KeyError as e:
+            print("error", e)
+            return Response(
+                {"message": [f"{e} is required"]}, status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            print("error", e)
+            return Response({"message": [f"{e}"]}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=["POST"], detail=False, permission_classes=[AllowAny])
+    def confirm_email(self, request):
+        try:
+            token = request.data["token"]
+            if not token:
+                return Response(
+                    convert_to_error_message("Token is required"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            # check email confirmation with token
+            confirm_email = EmailConfirmation.objects.filter(token=token)
+            if not confirm_email.exists():
+                return Response(
+                    convert_to_error_message("Invalid Email verification code entered"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            confirm_email = confirm_email.first()
+
+            # Check if token has expired
+            if confirm_email.check_expire:
+                return Response(
+                    convert_to_error_message("token expired"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            confirm_email.is_verified = True
+            confirm_email.save()
+
+            return Response(
+                convert_success_message("Email verified successfully"),
+                status=status.HTTP_200_OK,
+            )
+        except KeyError as e:
+            print("error", e)
+            return Response(
+                {"message": [f"{e} is required"]}, status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            print("error", e)
+            return Response({"message": [f"{e}"]}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=["GET"], permission_classes=[AllowAny])
+    def status(self, request):
+        return Response({"message": "welcome to Dinma Service. Service running..."})
