@@ -66,6 +66,7 @@ requests==2.31.0
 rpds-py==0.17.1
 six==1.16.0
 sqlparse==0.4.4
+stripe==8.2.0
 tomli==2.0.1
 tomlkit==0.12.3
 twilio==8.13.0

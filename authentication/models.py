@@ -158,3 +158,30 @@ class PractitionerPracticeCriteria(BaseModel):
     price_per_consultation = models.DecimalField(max_digits=12, decimal_places=2)
     minimum_age = models.PositiveIntegerField(null=True, blank=True)
     maximum_age = models.PositiveIntegerField(null=True, blank=True)
+
+
+class Referral(BaseModel):
+    REFERRAL_TYPES = (
+        ("patient", "patient"),
+        ("practitioner", "practitioner"),
+    )
+    from_user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="referee_user",
+        null=True,
+        blank=True,
+    )
+    to_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="referred_user",
+    )
+    reference_code = models.CharField(max_length=200, null=True)
+    status = models.CharField(
+        default="registered", max_length=200
+    )  # registered and onboarded are the two status here
+    type = models.CharField(
+        choices=REFERRAL_TYPES, max_length=200, null=True, blank=True
+    )

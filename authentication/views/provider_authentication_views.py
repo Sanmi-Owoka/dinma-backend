@@ -12,6 +12,7 @@ from rest_framework.viewsets import GenericViewSet
 from authentication.models import (
     PractitionerPracticeCriteria,
     ProviderQualification,
+    Referral,
     User,
 )
 from authentication.serializers.provider_authentication_serializers import (
@@ -101,6 +102,23 @@ class PractionerViewSet(GenericViewSet):
 
             new_user.set_password(password)
             new_user.save()
+
+            if serialized_input.validated_data.get("referral_code"):
+                referral_code = serialized_input.validated_data["referral_code"]
+                from_user = User.objects.filter(username=referral_code)
+
+                if not from_user.exists():
+                    return Response(
+                        {convert_to_error_message("Invalid referral code")},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                else:
+                    Referral.objects.create(
+                        from_user=from_user.first(),
+                        to_user=new_user,
+                        type="practitioner",
+                        reference_code=referral_code,
+                    )
 
             new_provider_qualification = ProviderQualification.objects.create(
                 user=new_user,
