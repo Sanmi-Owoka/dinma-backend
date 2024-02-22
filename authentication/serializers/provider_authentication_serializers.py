@@ -85,6 +85,15 @@ class OnboardPractionerSerializer(serializers.ModelSerializer):
         write_only=True,
     )
 
+    # referral_code
+    referral_code = serializers.CharField(
+        required=False,
+        max_length=150,
+        min_length=4,
+        trim_whitespace=True,
+        allow_blank=True,
+    )
+
     class Meta:
         model = User
         fields = [
@@ -117,6 +126,7 @@ class OnboardPractionerSerializer(serializers.ModelSerializer):
             # password
             "password",
             "confirm_password",
+            "referral_code",
         ]
         read_only_fields = [
             "id",
