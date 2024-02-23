@@ -50,9 +50,7 @@ THIRD_PARTY_APPS = [
     "rest_framework_simplejwt",
 ]
 
-LOCAL_APPS = [
-    "authentication",
-]
+LOCAL_APPS = ["authentication", "booking"]
 
 # Application definition
 
@@ -207,8 +205,6 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = str(f"{APPS_DIR}/ media")
 
 # SENGRID SETUP
-
-
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.sendgrid.net"
 EMAIL_HOST_USER = "apikey"  # this is exactly the value 'apikey'
@@ -222,5 +218,11 @@ DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_ACCOUNT_SID = os.getenv("MY_ACCOUNT_SID")
 TWILIO_NUMBER = os.getenv("MY_TWILIO_NUMBER")
+
+# STRIPE SETUP
 STRIPE_TEST_SECRET_KEY = os.getenv("STRIPE_TEST_SECRET_KEY")
 STRIPE_TEST_PUBLIC_KEY = os.getenv("STRIPE_TEST_PUBLIC_KEY")
+
+# ZIP CODE API SETUP
+ZIP_CODE_API_BASE_URL = os.getenv("ZIP_CODE_API_BASE_URL")
+ZIP_CODE_API_TEST_API_KEY = os.getenv("ZIP_CODE_API_TEST_API_KEY")
