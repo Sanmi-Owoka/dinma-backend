@@ -9,9 +9,7 @@ class ZipCodeApi:
 
     def get_close_zip_codes(self, zip_code) -> dict:
         try:
-            url = (
-                f"{self.base_url}rest/{self.test_api_key}/radius.json/{zip_code}/10/km"
-            )
+            url = f"{self.base_url}rest/{self.test_api_key}/radius.json/{zip_code}/15/mile"
             response = requests.get(url)
 
             if response.status_code != 200:
