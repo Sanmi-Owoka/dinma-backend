@@ -154,7 +154,7 @@ class PractitionerPracticeCriteria(BaseModel):
     preferred_zip_codes = ArrayField(
         models.CharField(max_length=255, null=True, blank=True)
     )
-    available_days = ArrayField(models.DateField(null=True, blank=True))
+    available_days = ArrayField(models.DateTimeField(null=True, blank=True))
     price_per_consultation = models.DecimalField(max_digits=12, decimal_places=2)
     minimum_age = models.PositiveIntegerField(null=True, blank=True)
     maximum_age = models.PositiveIntegerField(null=True, blank=True)
