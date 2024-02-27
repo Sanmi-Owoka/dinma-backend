@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from authentication.models import User
+from utility.helpers.functools import decrypt
 
 
 class CreatePatientProfileSerializer(serializers.ModelSerializer):
@@ -145,3 +146,52 @@ class ForgotPasswordSerializer(serializers.ModelSerializer):
             "new_password",
             "confirm_password",
         ]
+
+
+class SimpleDecryptedUserDetails(serializers.ModelSerializer):
+    first_name = serializers.SerializerMethodField()
+    last_name = serializers.SerializerMethodField()
+    photo = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "photo",
+            "first_name",
+            "last_name",
+            "email",
+            "gender",
+            "user_type,",
+        ]
+
+        read_only_fields = [
+            "id",
+            "photo",
+            "first_name",
+            "last_name",
+            "email",
+            "gender",
+            "user_type,",
+        ]
+
+    def get_first_name(self, instance):
+        try:
+            return decrypt(instance.first_name)
+        except Exception as e:
+            print("Error", e)
+            return None
+
+    def get_last_name(self, instance):
+        try:
+            return decrypt(instance.last_name)
+        except Exception as e:
+            print("Error", e)
+            return None
+
+    def get_photo(self, instance):
+        try:
+            return self.context["request"].build_absolute_uri(instance.photo.url)
+        except Exception as e:
+            print("Error", e)
+            return None

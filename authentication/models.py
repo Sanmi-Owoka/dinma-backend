@@ -53,6 +53,9 @@ class User(AbstractUser):
     )
     email_verified = models.BooleanField(default=False)
 
+    # IF PROVIDER
+    qualified = models.BooleanField(default=False)
+
     class Meta:
         ordering = ["-date_joined"]
 

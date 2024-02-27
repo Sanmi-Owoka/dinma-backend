@@ -4,6 +4,7 @@ from authentication.views.patient_authentication_views import (
     PatientAuthenticationViewSet,
 )
 from authentication.views.provider_authentication_views import PractionerViewSet
+from booking.views.booking_views import BookingViewSet
 
 if settings.DEBUG:
     router = DefaultRouter()
@@ -20,6 +21,12 @@ router.register(
     "practioners",
     PractionerViewSet,
     basename="practioner viewsets",
+)
+
+router.register(
+    "bookings",
+    BookingViewSet,
+    basename="booking viewsets",
 )
 
 app_name = "api"

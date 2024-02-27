@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+# from authentication.models import User
 from booking.models import UserBookingDetails
 
 
@@ -16,4 +17,11 @@ class BookingSerializer(serializers.ModelSerializer):
             "date_care_is_needed",
             "age_of_patient",
             "zipcode",
+            "status",
+        ]
+        read_only_fields = [
+            "id",
+            "status",
+            "created_at",
+            "updated_at",
         ]
