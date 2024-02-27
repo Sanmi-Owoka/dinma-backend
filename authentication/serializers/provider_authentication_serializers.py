@@ -178,7 +178,7 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
             "gender",
             "preferred_communication",
             "languages_spoken",
-            "user_type,",
+            "user_type",
             "licensed_states",
             "practice_criteria",
         ]

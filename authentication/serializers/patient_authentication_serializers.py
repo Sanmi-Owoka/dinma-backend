@@ -162,7 +162,7 @@ class SimpleDecryptedUserDetails(serializers.ModelSerializer):
             "last_name",
             "email",
             "gender",
-            "user_type,",
+            "user_type",
         ]
 
         read_only_fields = [
@@ -172,7 +172,7 @@ class SimpleDecryptedUserDetails(serializers.ModelSerializer):
             "last_name",
             "email",
             "gender",
-            "user_type,",
+            "user_type",
         ]
 
     def get_first_name(self, instance):
