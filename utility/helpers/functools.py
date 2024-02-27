@@ -1,9 +1,12 @@
 import base64
+import json
 import uuid
 
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.core.files.base import ContentFile
+from django.core.paginator import Paginator
+from django.http import JsonResponse
 from django.utils import timezone
 
 from authentication.models import User
@@ -108,6 +111,23 @@ def decrypt_user_data(user_data: User, request) -> dict:
     return output_response
 
 
+def decrypt_simple_data(user_data: User, request) -> dict:
+    if user_data.photo:
+        photo = request.build_absolute_uri(user_data.photo.url)
+    else:
+        photo = None
+    output_response = {
+        "first_name": decrypt(user_data.first_name),
+        "last_name": decrypt(user_data.last_name),
+        "email": user_data.email,
+        "phone_number": user_data.phone_number,
+        "gender": user_data.gender,
+        "user_type": user_data.user_type,
+        "photo": photo,
+    }
+    return output_response
+
+
 def base64_to_data(base64_data):
     format, imgstr = base64_data.split(";base64,")
     ext = format.split("/")[-1]
@@ -123,3 +143,25 @@ def generate_unique_id(model):
         generate_id = uuid.uuid4()
         exists = model.objects.filter(token=generate_id).exists()
     return generate_id
+
+
+def jsonify(data):
+    return json.loads(JsonResponse(data, safe=False).content)
+
+
+def paginate(query_set, page_num, serializer, context, page_size=10):
+    pag_obj = Paginator(query_set, page_size)
+    if page_num is None:
+        page = 1
+    else:
+        page = page_num
+    main_page = pag_obj.page(page)
+    data = {
+        "count": pag_obj.count,
+        "pages": pag_obj.num_pages,
+        "result": jsonify(
+            serializer(main_page.object_list, many=True, context=context).data
+        ),
+        "page": page,
+    }
+    return data

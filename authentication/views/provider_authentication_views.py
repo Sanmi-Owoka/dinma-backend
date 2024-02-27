@@ -17,13 +17,16 @@ from authentication.models import (
 )
 from authentication.serializers.provider_authentication_serializers import (
     OnboardPractionerSerializer,
+    SimpleDecryptedProviderDetails,
 )
 from utility.helpers.functools import (
+    base64_to_data,
     convert_serializer_errors_from_dict_to_list,
     convert_to_error_message,
     convert_to_success_message_serialized_data,
     decrypt_user_data,
     encrypt,
+    paginate,
 )
 
 # from rest_framework_simplejwt.tokens import RefreshToken
@@ -47,6 +50,7 @@ class PractionerViewSet(GenericViewSet):
     def onboard_practioner(self, request):
         try:
             serialized_input = self.get_serializer(data=request.data)
+
             if not serialized_input.is_valid():
                 return Response(
                     convert_to_error_message(
@@ -90,7 +94,7 @@ class PractionerViewSet(GenericViewSet):
                     "preferred_communication"
                 ].capitalize(),
                 languages_spoken=serialized_input.validated_data["languages_spoken"],
-                user_type="provider",
+                user_type="health_provider",
             )
 
             try:
@@ -99,6 +103,8 @@ class PractionerViewSet(GenericViewSet):
                 return Response(
                     convert_to_error_message(err), status=status.HTTP_400_BAD_REQUEST
                 )
+            if request.data.get("photo"):
+                new_user.photo = base64_to_data(request.data.get("photo"))
 
             new_user.set_password(password)
             new_user.save()
@@ -155,6 +161,35 @@ class PractionerViewSet(GenericViewSet):
         except KeyError as e:
             return Response(
                 convert_to_error_message(f"{e}"), status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_name="Get all health providers",
+        permission_classes=[AllowAny],
+        serializer_class=SimpleDecryptedProviderDetails,
+    )
+    def get_all_health_providers(self, request):
+        try:
+            all_providers = User.objects.filter(
+                user_type="health_provider", qualified=True
+            )
+            return Response(
+                convert_to_success_message_serialized_data(
+                    paginate(
+                        all_providers,
+                        int(request.query_params.get("page", 1)),
+                        self.get_serializer,
+                        {"request": request},
+                        int(request.query_params.get("limit", 10)),
+                    )
+                ),
+                status=status.HTTP_200_OK,
             )
         except Exception as err:
             return Response(
