@@ -90,6 +90,10 @@ class OnboardPractionerSerializer(serializers.ModelSerializer):
         write_only=True,
     )
 
+    social_security_number = serializers.CharField(
+        required=True, max_length=255, trim_whitespace=True
+    )
+
     # referral_code
     referral_code = serializers.CharField(
         required=False,
@@ -133,6 +137,7 @@ class OnboardPractionerSerializer(serializers.ModelSerializer):
             "confirm_password",
             "referral_code",
             "username",
+            "social_security_number",
         ]
         read_only_fields = ["id", "date_joined", "username"]
 
