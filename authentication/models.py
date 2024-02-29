@@ -56,6 +56,8 @@ class User(AbstractUser):
     # IF PROVIDER
     qualified = models.BooleanField(default=False)
 
+    social_security_number = models.CharField(max_length=250, null=True, blank=True)
+
     class Meta:
         ordering = ["-date_joined"]
 
