@@ -11,7 +11,7 @@ from authentication.models import User
 from authentication.serializers.provider_authentication_serializers import (
     SimpleDecryptedProviderDetails,
 )
-from booking.functools import recommend_providers
+from booking.functools import generate_unique_id, recommend_providers
 from booking.models import UserBookingDetails
 from booking.serializers.booking_serializer import BookingSerializer
 from utility.helpers.functools import (  # decrypt_simple_data,; decrypt_user_data,; encrypt,
@@ -74,6 +74,7 @@ class BookingViewSet(GenericViewSet):
 
             # create Booking details
             booking_details = UserBookingDetails(
+                id=generate_unique_id(),
                 patient=logged_in_user,
                 date_care_is_needed=day_care_is_needed,
                 symptom=serialized_input.validated_data["symptom"],

@@ -16,7 +16,11 @@ class UserBookingDetails(BaseModel):
         User, on_delete=models.CASCADE, related_name="patient_booking_details"
     )
     practitioner = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="practitioner_booking_details"
+        User,
+        on_delete=models.CASCADE,
+        related_name="practitioner_booking_details",
+        null=True,
+        blank=True,
     )
     symptom = models.CharField(max_length=800, null=True, blank=True)
     date_care_is_needed = models.DateField(null=True, blank=True)
