@@ -64,7 +64,7 @@ class BookingViewSet(GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             day_care_is_needed = serialized_input.validated_data["date_care_is_needed"]
-            if day_care_is_needed > today:
+            if day_care_is_needed > today.date():
                 return Response(
                     convert_to_error_message("you can not pick a date less than today"),
                     status=status.HTTP_400_BAD_REQUEST,
