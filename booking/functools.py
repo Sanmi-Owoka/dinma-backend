@@ -1,5 +1,11 @@
+import uuid
+
+from django.db.models import Q
+
 from authentication.models import PractitionerPracticeCriteria
 from utility.services.zipcodeapi import ZipCodeApi
+
+from .models import UserBookingDetails
 
 
 def recommend_providers(age, zipcode):
@@ -7,15 +13,19 @@ def recommend_providers(age, zipcode):
         recommended_providers = []
         practitioner_criteria = PractitionerPracticeCriteria.objects.select_related(
             "user"
-        ).filter(minimum_age__gte=age, maximum_age__lte=age)
+        ).filter(Q(minimum_age__lte=age) & Q(maximum_age__gte=age))
         zipcodes = ZipCodeApi().get_close_zip_codes(zipcode)
         if not zipcodes["status"]:
             return {"status": False, "message": zipcodes["response"]}
         zipcodes = zipcodes["response"]
+
         practitioner_criteria = practitioner_criteria.filter(
-            preferred_zip_codes__overlaps=zipcodes
+            preferred_zip_codes__overlap=zipcodes
         )
-        recommended_providers.append(practitioner_criteria.user)
+
+        for criteria in practitioner_criteria:
+            recommended_providers.append(criteria.user)
+
         if len(recommended_providers) == 0:
             return {"status": False, "message": "No Provider recommendations"}
 
@@ -23,3 +33,12 @@ def recommend_providers(age, zipcode):
     except Exception as err:
         print(f"recommend_providers error {err}")
         return {"status": False, "message": f"{err}"}
+
+
+def generate_unique_id():
+    code = uuid.uuid4()
+    exists = UserBookingDetails.objects.filter(id=code).exists()
+    while exists:
+        code = uuid.uuid4()
+        exists = UserBookingDetails.objects.filter(id=code).exists()
+    return code
