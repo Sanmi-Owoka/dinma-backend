@@ -38,7 +38,7 @@ class BookingViewSet(GenericViewSet):
         methods=["POST"],
         detail=False,
         url_name="booking request",
-        serializer_class=SimpleDecryptedProviderDetails,
+        serializer_class=BookingSerializer,
     )
     def booking_request(self, request):
         try:
@@ -96,7 +96,7 @@ class BookingViewSet(GenericViewSet):
                     paginate(
                         providers,
                         int(request.query_params.get("page", 1)),
-                        self.get_serializer,
+                        SimpleDecryptedProviderDetails,
                         {"request": request},
                         int(request.query_params.get("limit", 10)),
                     )
