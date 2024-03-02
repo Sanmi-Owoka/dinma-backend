@@ -140,6 +140,7 @@ class PractionerViewSet(GenericViewSet):
             new_provider_qualification.save()
 
             new_provider_criteria = PractitionerPracticeCriteria.objects.create(
+                user=new_user,
                 practice_name=serialized_input.validated_data["practice_name"],
                 max_distance=serialized_input.validated_data["max_distance"],
                 preferred_zip_codes=serialized_input.validated_data[
