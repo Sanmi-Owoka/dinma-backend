@@ -23,7 +23,7 @@ class User(AbstractUser):
         ("health_provider", "health_provider"),
     )
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4(), editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     first_name = models.CharField(max_length=800, null=True, blank=True)
     last_name = models.CharField(max_length=800, null=True, blank=True)
     username = models.CharField(max_length=255, null=True, unique=True)
@@ -150,6 +150,13 @@ class ProviderQualification(BaseModel):
     is_verified = models.BooleanField(default=False)
 
 
+class PractitionerAvailableDateTime(BaseModel):
+    provider = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="provider_available_date_time"
+    )
+    available_date_time = models.DateTimeField(null=True, blank=True)
+
+
 class PractitionerPracticeCriteria(BaseModel):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="user_practice_criteria"
@@ -158,6 +165,12 @@ class PractitionerPracticeCriteria(BaseModel):
     max_distance = models.PositiveIntegerField(null=True, blank=True)
     preferred_zip_codes = ArrayField(
         models.CharField(max_length=255, null=True, blank=True)
+    )
+    available_date_time = models.ForeignKey(
+        PractitionerAvailableDateTime,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     available_days = ArrayField(models.DateTimeField(null=True, blank=True))
     price_per_consultation = models.DecimalField(max_digits=12, decimal_places=2)
