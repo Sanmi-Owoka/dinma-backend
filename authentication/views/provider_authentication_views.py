@@ -19,6 +19,7 @@ from authentication.serializers.provider_authentication_serializers import (
     OnboardPractionerSerializer,
     SimpleDecryptedProviderDetails,
 )
+from authentication.utils import start_schedule_background_tasks
 from utility.helpers.functools import (
     base64_to_data,
     convert_serializer_errors_from_dict_to_list,
@@ -155,6 +156,11 @@ class PractionerViewSet(GenericViewSet):
             )
 
             new_provider_criteria.save()
+
+            start_schedule_background_tasks(
+                days_and_time=serialized_input.validated_data["available_days"],
+                user=new_user,
+            )
 
             output_response = decrypt_user_data(new_user, request)
 
