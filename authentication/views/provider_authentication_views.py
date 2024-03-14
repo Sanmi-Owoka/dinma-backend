@@ -148,11 +148,7 @@ class PractionerViewSet(GenericViewSet):
                     "preferred_zip_codes"
                 ],
                 available_days=serialized_input.validated_data["available_days"],
-                price_per_consultation=serialized_input.validated_data[
-                    "price_per_consultation"
-                ],
-                minimum_age=serialized_input.validated_data["minimum_age"],
-                maximum_age=serialized_input.validated_data["maximum_age"],
+                age_range=serialized_input.validated_data["age_range"],
             )
 
             new_provider_criteria.save()

@@ -70,9 +70,9 @@ class OnboardPractionerSerializer(serializers.ModelSerializer):
             required=False, max_length=255, trim_whitespace=True
         ),
     )
-    price_per_consultation = serializers.DecimalField(max_digits=12, decimal_places=2)
-    minimum_age = serializers.IntegerField(min_value=0)
-    maximum_age = serializers.IntegerField(min_value=0)
+    age_range = serializers.CharField(
+        required=True, max_length=255, trim_whitespace=True
+    )
 
     # Password
     password = serializers.CharField(
@@ -129,9 +129,7 @@ class OnboardPractionerSerializer(serializers.ModelSerializer):
             "max_distance",
             "preferred_zip_codes",
             "available_days",
-            "price_per_consultation",
-            "minimum_age",
-            "maximum_age",
+            "age_range",
             # password
             "password",
             "confirm_password",
