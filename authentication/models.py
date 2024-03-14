@@ -174,8 +174,7 @@ class PractitionerPracticeCriteria(BaseModel):
     )
     available_days = ArrayField(models.DateTimeField(null=True, blank=True))
     price_per_consultation = models.DecimalField(max_digits=12, decimal_places=2)
-    minimum_age = models.PositiveIntegerField(null=True, blank=True)
-    maximum_age = models.PositiveIntegerField(null=True, blank=True)
+    age_range = models.CharField(max_length=255, null=True, blank=True)
 
 
 class Referral(BaseModel):

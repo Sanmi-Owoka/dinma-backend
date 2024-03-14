@@ -103,14 +103,7 @@ class PractitionerAvailableDateTimeAdmin(admin.ModelAdmin):
 
 @admin.register(PractitionerPracticeCriteria)
 class PractitionerPracticeCriteriaAdmin(admin.ModelAdmin):
-    list_display = [
-        "user",
-        "practice_name",
-        "max_distance",
-        "price_per_consultation",
-        "minimum_age",
-        "maximum_age",
-    ]
+    list_display = ["user", "practice_name", "max_distance", "age_range"]
     search_fields = ["provider__email"]
 
 
