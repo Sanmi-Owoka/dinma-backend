@@ -8,12 +8,17 @@ from utility.services.zipcodeapi import ZipCodeApi
 from .models import UserBookingDetails
 
 
-def recommend_providers(age, zipcode):
+def recommend_providers(age, zipcode, day_care_is_needed):
     try:
         recommended_providers = []
         practitioner_criteria = PractitionerPracticeCriteria.objects.select_related(
             "user"
         ).filter(Q(minimum_age__lte=age) & Q(maximum_age__gte=age))
+
+        practitioner_criteria = practitioner_criteria.filter(
+            available_date_time__available_date_time__date=day_care_is_needed
+        ).distinct()
+
         zipcodes = ZipCodeApi().get_close_zip_codes(zipcode)
         if not zipcodes["status"]:
             return {"status": False, "message": zipcodes["response"]}

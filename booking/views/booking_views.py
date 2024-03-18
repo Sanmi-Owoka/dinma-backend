@@ -84,7 +84,7 @@ class BookingViewSet(GenericViewSet):
             )
             booking_details.save()
 
-            get_providers = recommend_providers(age, zipcode)
+            get_providers = recommend_providers(age, zipcode, day_care_is_needed)
             if not get_providers["status"]:
                 return Response(
                     convert_to_error_message(get_providers["message"]),

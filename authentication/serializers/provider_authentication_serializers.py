@@ -149,7 +149,6 @@ class PractitionerPracticeCriteriaSerializer(serializers.ModelSerializer):
             "max_distance",
             "preferred_zip_codes",
             "available_days",
-            "price_per_consultation",
             "minimum_age",
         ]
         read_only_fiields = [
@@ -158,7 +157,6 @@ class PractitionerPracticeCriteriaSerializer(serializers.ModelSerializer):
             "max_distance",
             "preferred_zip_codes",
             "available_days",
-            "price_per_consultation",
             "minimum_age",
         ]
 

@@ -150,13 +150,6 @@ class ProviderQualification(BaseModel):
     is_verified = models.BooleanField(default=False)
 
 
-class PractitionerAvailableDateTime(BaseModel):
-    provider = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="provider_available_date_time"
-    )
-    available_date_time = models.DateTimeField(null=True, blank=True)
-
-
 class PractitionerPracticeCriteria(BaseModel):
     user = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="user_practice_criteria"
@@ -166,15 +159,21 @@ class PractitionerPracticeCriteria(BaseModel):
     preferred_zip_codes = ArrayField(
         models.CharField(max_length=255, null=True, blank=True)
     )
-    available_date_time = models.ForeignKey(
-        PractitionerAvailableDateTime,
-        on_delete=models.SET_NULL,
+    available_days = ArrayField(models.DateTimeField(null=True, blank=True))
+    age_range = models.CharField(max_length=255, null=True, blank=True)
+    minimum_age = models.PositiveIntegerField(null=True, blank=True)
+    maximum_age = models.PositiveIntegerField(null=True, blank=True)
+
+
+class PractitionerAvailableDateTime(BaseModel):
+    provider_criteria = models.ForeignKey(
+        PractitionerPracticeCriteria,
+        on_delete=models.CASCADE,
+        related_name="available_date_time",
         null=True,
         blank=True,
     )
-    available_days = ArrayField(models.DateTimeField(null=True, blank=True))
-    price_per_consultation = models.DecimalField(max_digits=12, decimal_places=2)
-    age_range = models.CharField(max_length=255, null=True, blank=True)
+    available_date_time = models.DateTimeField(null=True, blank=True)
 
 
 class Referral(BaseModel):
