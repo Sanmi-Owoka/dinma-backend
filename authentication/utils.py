@@ -1,7 +1,6 @@
 import random
 import string
 import threading
-import time
 
 from django.conf import settings
 from django.core.mail import EmailMessage
@@ -11,8 +10,10 @@ from authentication.models import (
     EmailConfirmation,
     PhoneNumberVerification,
     PractitionerAvailableDateTime,
-    User,
+    PractitionerPracticeCriteria,
 )
+
+# import time
 
 
 def generate_code(num):
@@ -60,12 +61,13 @@ def send_email_verification(to_email, token):
         pass
 
 
-def create_provider_available_days(days_and_time: list, user: User):
+def create_provider_available_days(
+    days_and_time: list, provider_criteria: PractitionerPracticeCriteria
+):
     try:
-        time.sleep(1)
         for day_and_time in days_and_time:
             provider_available_date_time = PractitionerAvailableDateTime.objects.create(
-                provider=user,
+                provider_criteria=provider_criteria,
                 available_date_time=day_and_time,
             )
             provider_available_date_time.save()
@@ -74,9 +76,9 @@ def create_provider_available_days(days_and_time: list, user: User):
         pass
 
 
-def start_schedule_background_tasks(days_and_time, user):
+def start_schedule_background_tasks(days_and_time, provider_criteria):
     # Create and start a new thread
     thread = threading.Thread(
-        target=create_provider_available_days(days_and_time, user)
+        target=create_provider_available_days(days_and_time, provider_criteria)
     )
     thread.start()

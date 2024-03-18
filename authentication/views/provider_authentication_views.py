@@ -77,6 +77,15 @@ class PractionerViewSet(GenericViewSet):
             date_of_birth = serialized_input.validated_data["date_of_birth"]
             user_dob_date = datetime.datetime.strptime(date_of_birth, "%d-%m-%Y").date()
 
+            check_user_exists = User.objects.filter(
+                email=serialized_input.validated_data["email"].lower()
+            )
+            if check_user_exists.exists():
+                return Response(
+                    {convert_to_error_message("User with this email already exists")},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             new_user = User(
                 first_name=encrypt(
                     serialized_input.validated_data["first_name"].capitalize()
@@ -139,7 +148,13 @@ class PractionerViewSet(GenericViewSet):
                 licensed_states=serialized_input.validated_data["licensed_states"],
             )
             new_provider_qualification.save()
-
+            age_range = serialized_input.validated_data["age_range"]
+            if age_range == "Pediatrician":
+                maximum_age = 18
+                minimum_age = 0
+            else:
+                maximum_age = 100
+                minimum_age = 18
             new_provider_criteria = PractitionerPracticeCriteria.objects.create(
                 user=new_user,
                 practice_name=serialized_input.validated_data["practice_name"],
@@ -149,13 +164,15 @@ class PractionerViewSet(GenericViewSet):
                 ],
                 available_days=serialized_input.validated_data["available_days"],
                 age_range=serialized_input.validated_data["age_range"],
+                minimum_age=minimum_age,
+                maximum_age=maximum_age,
             )
 
             new_provider_criteria.save()
 
             start_schedule_background_tasks(
                 days_and_time=serialized_input.validated_data["available_days"],
-                user=new_user,
+                provider_criteria=new_provider_criteria,
             )
 
             output_response = decrypt_user_data(new_user, request)
