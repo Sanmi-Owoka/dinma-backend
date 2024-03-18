@@ -198,11 +198,11 @@ class PatientAuthenticationViewSet(GenericViewSet):
                 )
             get_user = get_user["response"]
 
-            if get_user.user_type != "patient":
-                return Response(
-                    convert_to_error_message("User not authorized to login"),
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+            # if get_user.user_type != "patient":
+            #     return Response(
+            #         convert_to_error_message("User not authorized to login"),
+            #         status=status.HTTP_400_BAD_REQUEST,
+            #     )
 
             if not get_user.check_password(password):
                 return Response(

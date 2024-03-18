@@ -95,10 +95,10 @@ class ProviderQualificationAdmin(admin.ModelAdmin):
 @admin.register(PractitionerAvailableDateTime)
 class PractitionerAvailableDateTimeAdmin(admin.ModelAdmin):
     list_display = [
-        "provider",
+        "provider_criteria",
         "available_date_time",
     ]
-    search_fields = ["provider__email"]
+    search_fields = ["provider_criteria__user__email"]
 
 
 @admin.register(PractitionerPracticeCriteria)
