@@ -70,9 +70,9 @@ class OnboardPractionerSerializer(serializers.ModelSerializer):
             required=False, max_length=255, trim_whitespace=True
         ),
     )
-    price_per_consultation = serializers.DecimalField(max_digits=12, decimal_places=2)
-    minimum_age = serializers.IntegerField(min_value=0)
-    maximum_age = serializers.IntegerField(min_value=0)
+    age_range = serializers.CharField(
+        required=True, max_length=255, trim_whitespace=True
+    )
 
     # Password
     password = serializers.CharField(
@@ -88,6 +88,10 @@ class OnboardPractionerSerializer(serializers.ModelSerializer):
         min_length=4,
         trim_whitespace=True,
         write_only=True,
+    )
+
+    social_security_number = serializers.CharField(
+        required=True, max_length=255, trim_whitespace=True
     )
 
     # referral_code
@@ -125,14 +129,13 @@ class OnboardPractionerSerializer(serializers.ModelSerializer):
             "max_distance",
             "preferred_zip_codes",
             "available_days",
-            "price_per_consultation",
-            "minimum_age",
-            "maximum_age",
+            "age_range",
             # password
             "password",
             "confirm_password",
             "referral_code",
             "username",
+            "social_security_number",
         ]
         read_only_fields = ["id", "date_joined", "username"]
 
@@ -146,7 +149,6 @@ class PractitionerPracticeCriteriaSerializer(serializers.ModelSerializer):
             "max_distance",
             "preferred_zip_codes",
             "available_days",
-            "price_per_consultation",
             "minimum_age",
         ]
         read_only_fiields = [
@@ -155,7 +157,6 @@ class PractitionerPracticeCriteriaSerializer(serializers.ModelSerializer):
             "max_distance",
             "preferred_zip_codes",
             "available_days",
-            "price_per_consultation",
             "minimum_age",
         ]
 
