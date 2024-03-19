@@ -82,7 +82,7 @@ class PractionerViewSet(GenericViewSet):
             )
             if check_user_exists.exists():
                 return Response(
-                    {convert_to_error_message("User with this email already exists")},
+                    convert_to_error_message("User with this email already exists"),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -119,9 +119,6 @@ class PractionerViewSet(GenericViewSet):
             if request.data.get("photo"):
                 new_user.photo = base64_to_data(request.data.get("photo"))
 
-            new_user.set_password(password)
-            new_user.save()
-
             if serialized_input.validated_data.get("referral_code"):
                 referral_code = serialized_input.validated_data["referral_code"]
                 from_user = User.objects.filter(username=referral_code)
@@ -139,6 +136,18 @@ class PractionerViewSet(GenericViewSet):
                         reference_code=referral_code,
                     )
 
+            age_range = serialized_input.validated_data["age_range"].capitalize()
+            if age_range not in ["Pediatrician", "Adult"]:
+                return Response(
+                    convert_to_error_message(
+                        f"you entered {age_range}, age range choices are Pediatrician and Adult"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            new_user.set_password(password)
+            new_user.save()
+
             new_provider_qualification = ProviderQualification.objects.create(
                 user=new_user,
                 practioner_type=serialized_input.validated_data["practioner_type"],
@@ -148,7 +157,7 @@ class PractionerViewSet(GenericViewSet):
                 licensed_states=serialized_input.validated_data["licensed_states"],
             )
             new_provider_qualification.save()
-            age_range = serialized_input.validated_data["age_range"]
+
             if age_range == "Pediatrician":
                 maximum_age = 18
                 minimum_age = 0
