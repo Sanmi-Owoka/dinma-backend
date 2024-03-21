@@ -52,6 +52,7 @@ class CreateBookingSerializer(serializers.ModelSerializer):
             "zipcode",
             "status",
             "practitioner",
+            "reason",
             "created_at",
             "updated_at",
         ]
@@ -63,6 +64,7 @@ class CreateBookingSerializer(serializers.ModelSerializer):
             "age_of_patient",
             "zipcode",
             "status",
+            "reason",
             "created_at",
             "updated_at",
         ]
@@ -85,6 +87,7 @@ class GetProviderBookingSerializer(serializers.ModelSerializer):
             "zipcode",
             "status",
             "date_time_of_care",
+            "reason",
             "created_at",
             "updated_at",
         ]
@@ -96,6 +99,7 @@ class GetProviderBookingSerializer(serializers.ModelSerializer):
             "zipcode",
             "status",
             "date_time_of_care",
+            "reason",
             "created_at",
             "updated_at",
         ]
@@ -110,6 +114,41 @@ class ConfirmBookingSerializer(serializers.ModelSerializer):
         model = UserBookingDetails
         fields = [
             "booking_id",
+            "id",
+            "date_care_is_needed",
+            "age_of_patient",
+            "zipcode",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "symptom",
+            "date_care_is_needed",
+            "age_of_patient",
+            "zipcode",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class RejectBookingSerializer(serializers.ModelSerializer):
+    booking_id = serializers.CharField(
+        required=True, max_length=50, trim_whitespace=True, write_only=True
+    )
+    reason = serializers.CharField(
+        required=True,
+        max_length=50,
+        trim_whitespace=True,
+    )
+
+    class Meta:
+        model = UserBookingDetails
+        fields = [
+            "booking_id",
+            "reason",
             "id",
             "date_care_is_needed",
             "age_of_patient",
