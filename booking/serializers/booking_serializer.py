@@ -71,7 +71,10 @@ class CreateBookingSerializer(serializers.ModelSerializer):
 
     def get_practitioner(self, instance):
         try:
-            return SimpleDecryptedProviderDetails(instance.practitioner).data
+            if instance.practitioner:
+                return SimpleDecryptedProviderDetails(instance.practitioner).data
+            else:
+                return None
         except Exception as e:
             print(e)
             return None
