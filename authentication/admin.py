@@ -41,7 +41,6 @@ class UserAdmin(auth_admin.UserAdmin):
                     "address",
                     "city",
                     "state",
-                    "country",
                     "preferred_communication",
                     "languages_spoken",
                     "user_type",

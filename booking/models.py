@@ -7,6 +7,7 @@ from authentication.models import User
 class UserBookingDetails(BaseModel):
     BOOKING_STATUS_CHOICES = (
         ("requested", "requested"),
+        ("pending", "pending"),
         ("accepted", "accepted"),
         ("rejected", "rejected"),
         ("failed", "failed"),
@@ -29,3 +30,5 @@ class UserBookingDetails(BaseModel):
     status = models.CharField(
         choices=BOOKING_STATUS_CHOICES, max_length=200, null=True, blank=True
     )
+    date_time_of_care = models.DateTimeField(null=True, blank=True)
+    reason = models.CharField(max_length=800, null=True, blank=True)
