@@ -522,7 +522,7 @@ class BookingViewSet(GenericViewSet):
             booking_details.save()
 
             # try:
-            subject = "Booking Request Confirmed"
+            subject = "Booking Request Rejected"
             from_email = settings.DEFAULT_FROM_EMAIL
             body = render_to_string(
                 "email/reject_booking_request.html",
