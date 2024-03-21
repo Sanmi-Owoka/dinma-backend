@@ -26,6 +26,7 @@ from booking.serializers.booking_serializer import (
     ConfirmBookingSerializer,
     CreateBookingSerializer,
     GetProviderBookingSerializer,
+    RejectBookingSerializer,
 )
 from utility.helpers.functools import (  # decrypt_simple_data,; decrypt_user_data,; encrypt,
     convert_serializer_errors_from_dict_to_list,
@@ -451,6 +452,102 @@ class BookingViewSet(GenericViewSet):
                 convert_success_message("Booking had been successfully confirmed")
             )
 
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_name="reject_booking_request",
+        serializer_class=RejectBookingSerializer,
+    )
+    def reject_booking_request(self, request):
+        try:
+            user = request.user
+            logged_in_user = User.objects.get(id=user.id)
+            if logged_in_user.user_type == "patient":
+                return Response(
+                    convert_to_error_message(
+                        "You are not authorized for this function"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(
+                        convert_serializer_errors_from_dict_to_list(
+                            serialized_input.errors
+                        )
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            booking_id = serialized_input.validated_data.get("booking_id")
+            reason = serialized_input.validated_data.get("reason")
+
+            booking_details = UserBookingDetails.objects.filter(id=booking_id)
+            if not booking_details.exists():
+                return Response(
+                    convert_to_error_message(f"No booking found with id {booking_id}"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            booking_details = booking_details.first()
+            if booking_details.status != "pending":
+                return Response(
+                    convert_to_error_message(
+                        f"The booking with id {booking_id} is not pending"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if booking_details.practitioner != logged_in_user:
+                return Response(
+                    convert_to_error_message(
+                        f"The booking with id {booking_id} does not exists"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            patient = booking_details.patient
+            fullname = f"{patient.first_name} {patient.last_name}"
+            date_time_of_care = booking_details.date_time_of_care
+
+            booking_details.status = "rejected"
+            booking_details.reason = reason
+            booking_details.save()
+
+            # try:
+            subject = "Booking Request Confirmed"
+            from_email = settings.DEFAULT_FROM_EMAIL
+            body = render_to_string(
+                "email/reject_booking_request.html",
+                {
+                    "fullname": fullname,
+                    "date_time_of_care": date_time_of_care,
+                    "age_of_patient": booking_details.age_of_patient,
+                    "zipcode": booking_details.zipcode,
+                    "reason": reason,
+                },
+            )
+            message = EmailMessage(
+                subject,
+                body,
+                to=[patient.email],
+                from_email=from_email,
+                bcc=[logged_in_user.email],
+            )
+            message.content_subtype = "html"
+            message.send(fail_silently=True)
+
+            return Response(
+                convert_success_message("Booking had been successfully rejected"),
+                status=status.HTTP_200_OK,
+            )
         except Exception as err:
             return Response(
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
