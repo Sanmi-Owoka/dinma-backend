@@ -209,7 +209,7 @@ class PractionerViewSet(GenericViewSet):
     def get_all_health_providers(self, request):
         try:
             all_providers = User.objects.filter(
-                user_type="health_provider", qualified=True
+                user_type="health_provider",
             )
             return Response(
                 convert_to_success_message_serialized_data(
