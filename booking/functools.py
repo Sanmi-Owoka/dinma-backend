@@ -32,7 +32,7 @@ def recommend_providers(age, zipcode, day_care_is_needed):
             recommended_providers.append(criteria.user)
 
         if len(recommended_providers) == 0:
-            return {"status": False, "message": "No Provider recommendations"}
+            return {"status": True, "message": []}
 
         return {"status": True, "message": recommended_providers}
     except Exception as err:
