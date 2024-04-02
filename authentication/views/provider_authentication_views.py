@@ -137,7 +137,7 @@ class PractionerViewSet(GenericViewSet):
                     )
 
             age_range = serialized_input.validated_data["age_range"].capitalize()
-            if age_range not in ["Pediatrician", "Adult"]:
+            if age_range not in ["Pediatrician", "Adult", "Both"]:
                 return Response(
                     convert_to_error_message(
                         f"you entered {age_range}, age range choices are Pediatrician and Adult"
@@ -161,9 +161,12 @@ class PractionerViewSet(GenericViewSet):
             if age_range == "Pediatrician":
                 maximum_age = 18
                 minimum_age = 0
-            else:
+            elif age_range == "Adult":
                 maximum_age = 100
                 minimum_age = 18
+            else:
+                maximum_age = 100
+                minimum_age = 0
             new_provider_criteria = PractitionerPracticeCriteria.objects.create(
                 user=new_user,
                 practice_name=serialized_input.validated_data["practice_name"],
