@@ -105,6 +105,11 @@ class BookingViewSet(GenericViewSet):
                     convert_to_error_message(get_providers["message"]),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            if get_providers["message"] == []:
+                return Response(
+                    [],
+                    status=status.HTTP_200_OK,
+                )
             booking_details.save()
 
             providers = get_providers["message"]
