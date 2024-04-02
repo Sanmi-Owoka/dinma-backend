@@ -107,7 +107,11 @@ class BookingViewSet(GenericViewSet):
                 )
             if get_providers["message"] == []:
                 return Response(
-                    [],
+                    {
+                        "status": "Success",
+                        "message": "request successful",
+                        "data": {"count": 0, "pages": 0, "result": [], "page": 0},
+                    },
                     status=status.HTTP_200_OK,
                 )
             booking_details.save()
