@@ -102,6 +102,7 @@ def decrypt_user_data(user_data: User, request) -> dict:
     else:
         photo = None
     output_response = {
+        "id": user_data.id,
         "first_name": decrypt(user_data.first_name),
         "last_name": decrypt(user_data.last_name),
         "email": user_data.email,
