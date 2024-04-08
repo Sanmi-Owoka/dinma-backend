@@ -220,3 +220,9 @@ class InsuranceDetails(BaseModel):
     patient_relationship = models.CharField(
         choices=PATIENT_RELATIONSHIP_CHOICES, max_length=255, null=True, blank=True
     )
+    self_pay = models.DecimalField(
+        decimal_places=2, max_digits=12, null=True, blank=True
+    )
+    insurance_coverage = models.DecimalField(
+        decimal_places=2, max_digits=12, null=True, blank=True
+    )

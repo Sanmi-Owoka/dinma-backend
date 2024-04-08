@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from authentication.models import User
+from authentication.models import InsuranceDetails, User
 from utility.helpers.functools import decrypt
 
 
@@ -195,3 +195,20 @@ class SimpleDecryptedUserDetails(serializers.ModelSerializer):
         except Exception as e:
             print("Error", e)
             return None
+
+
+class InsuranceDetailsSerializer(serializers.ModelSerializer):
+    user_id = serializers.UUIDField(required=True, write_only=True)
+
+    class Meta:
+        model = InsuranceDetails
+        fields = "__all__"
+        read_only_fields = ["user", "self_pay", "insurance_coverage"]
+        extra_kwargs = {
+            "insurance_company_name": {"required": True},
+            "insurance_phone_number": {"required": True},
+            "insurance_policy_number": {"required": True},
+            "insurance_group_number": {"required": True},
+            "insured_date_of_birth": {"required": True},
+            "patient_relationship": {"required": True},
+        }
