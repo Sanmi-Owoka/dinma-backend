@@ -1,5 +1,6 @@
 import datetime
 import uuid
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
@@ -16,6 +17,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from authentication.models import (
     EmailConfirmation,
+    InsuranceDetails,
     PasswordReset,
     PhoneNumberVerification,
     User,
@@ -24,6 +26,7 @@ from authentication.serializers.patient_authentication_serializers import (
     ChangePasswordSerializer,
     CreatePatientProfileSerializer,
     ForgotPasswordSerializer,
+    InsuranceDetailsSerializer,
     PatientLoginSerializer,
 )
 from authentication.utils import (
@@ -45,6 +48,7 @@ from utility.helpers.functools import (
     get_specific_user_with_email,
 )
 from utility.helpers.send_sms import send_plain_SMS
+from utility.services.pverify import Pverify
 
 
 @extend_schema(tags=["Patient authentication endpoints"])
@@ -674,6 +678,116 @@ class PatientAuthenticationViewSet(GenericViewSet):
             print("error", e)
             return Response(
                 {"message": [f"{e} is required"]}, status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            print("error", e)
+            return Response({"message": [f"{e}"]}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        serializer_class=InsuranceDetailsSerializer,
+        permission_classes=[AllowAny],
+    )
+    def verify_patient_insurance(self, request):
+        try:
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(
+                        convert_serializer_errors_from_dict_to_list(
+                            serialized_input.errors
+                        )
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user_id = serialized_input.validated_data["user_id"]
+            user = User.objects.filter(id=user_id)
+            if not user.exists():
+                return Response(
+                    convert_to_error_message("User not found"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user = user.first()
+
+            check_insurance_details_exists = InsuranceDetails.objects.filter(
+                user=user
+            ).exists()
+            if check_insurance_details_exists:
+                return Response(
+                    convert_to_error_message("User already has Insurance verified"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            insurance_company_name = serialized_input.validated_data[
+                "insurance_company_name"
+            ]
+            insurance_phone_number = serialized_input.validated_data[
+                "insurance_phone_number"
+            ]
+            insurance_policy_number = serialized_input.validated_data[
+                "insurance_policy_number"
+            ]
+            insurance_group_number = serialized_input.validated_data[
+                "insurance_group_number"
+            ]
+            insured_date_of_birth = serialized_input.validated_data[
+                "insured_date_of_birth"
+            ]
+            patient_relationship = serialized_input.validated_data[
+                "patient_relationship"
+            ]
+
+            dob_list = insured_date_of_birth.split("/")
+            if len(dob_list) != 3:
+                return Response(
+                    convert_to_error_message("Invalid date of birth"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            dob = f"{dob_list[1]}/{dob_list[0]}/{dob_list[2]}"
+
+            insurance_obj = Pverify().verify_insurance(
+                insurance_company_name,
+                insurance_policy_number,
+                dob,
+                patient_relationship,
+            )
+
+            if not insurance_obj["status"]:
+                return Response(
+                    convert_to_error_message(insurance_obj["response"]),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            get_insurance_total = Pverify().complete_insurance_verification(
+                insurance_obj["response"], patient_relationship
+            )
+            if get_insurance_total["status"] == "failure":
+                return Response(
+                    convert_to_error_message(get_insurance_total["response"]),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            insurance_coverage = Decimal(get_insurance_total["insurance_coverage"])
+            self_pay = Decimal(get_insurance_total["amount"])
+
+            insurance_details_obj = InsuranceDetails.objects.create(
+                user=user,
+                insurance_company_name=insurance_company_name,
+                insurance_phone_number=insurance_phone_number,
+                insurance_policy_number=insurance_policy_number,
+                insurance_group_number=insurance_group_number,
+                insured_date_of_birth=insured_date_of_birth,
+                patient_relationship=patient_relationship,
+                self_pay=self_pay,
+                insurance_coverage=insurance_coverage,
+            )
+
+            response = self.get_serializer(insurance_details_obj)
+            return Response(
+                convert_to_success_message_serialized_data(response.data),
+                status=status.HTTP_200_OK,
             )
         except Exception as e:
             print("error", e)
