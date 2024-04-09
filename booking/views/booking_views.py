@@ -26,6 +26,7 @@ from booking.serializers.booking_serializer import (
     ConfirmBookingSerializer,
     CreateBookingSerializer,
     GetProviderBookingSerializer,
+    ListUserBookingsSerializer,
     RejectBookingSerializer,
 )
 from utility.helpers.functools import (  # decrypt_simple_data,; decrypt_user_data,; encrypt,
@@ -555,6 +556,54 @@ class BookingViewSet(GenericViewSet):
 
             return Response(
                 convert_success_message("Booking had been successfully rejected"),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(methods=["GET"], detail=False, serializer_class=ListUserBookingsSerializer)
+    def get_patient_bookings(self, request):
+        try:
+            user = request.user
+            logged_in_user = User.objects.get(id=user.id)
+            user_bookings = UserBookingDetails.objects.filter(patient=logged_in_user)
+            return Response(
+                convert_to_success_message_serialized_data(
+                    paginate(
+                        user_bookings,
+                        int(request.query_params.get("page", 1)),
+                        self.get_serializer,
+                        {"request": request},
+                        int(request.query_params.get("limit", 10)),
+                    )
+                ),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(methods=["GET"], detail=False, serializer_class=ListUserBookingsSerializer)
+    def get_provider_bookings(self, request):
+        try:
+            user = request.user
+            logged_in_user = User.objects.get(id=user.id)
+            user_bookings = UserBookingDetails.objects.filter(
+                practitioner=logged_in_user
+            )
+            return Response(
+                convert_to_success_message_serialized_data(
+                    paginate(
+                        user_bookings,
+                        int(request.query_params.get("page", 1)),
+                        self.get_serializer,
+                        {"request": request},
+                        int(request.query_params.get("limit", 10)),
+                    )
+                ),
                 status=status.HTTP_200_OK,
             )
         except Exception as err:

@@ -170,3 +170,19 @@ class RejectBookingSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+
+class ListUserBookingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserBookingDetails
+        fields = "__all__"
+
+    def get_practitioner(self, instance):
+        try:
+            if instance.practitioner:
+                return SimpleDecryptedProviderDetails(instance.practitioner).data
+            else:
+                return None
+        except Exception as e:
+            print(e)
+            return None
