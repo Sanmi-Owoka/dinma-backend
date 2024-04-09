@@ -1,6 +1,8 @@
 import base64
 import json
 import uuid
+from decimal import Decimal
+from re import sub
 
 from cryptography.fernet import Fernet
 from django.conf import settings
@@ -102,6 +104,7 @@ def decrypt_user_data(user_data: User, request) -> dict:
     else:
         photo = None
     output_response = {
+        "id": user_data.id,
         "first_name": decrypt(user_data.first_name),
         "last_name": decrypt(user_data.last_name),
         "email": user_data.email,
@@ -174,3 +177,13 @@ def paginate(query_set, page_num, serializer, context, page_size=10):
         "page": page,
     }
     return data
+
+
+def parse_dollar_string_to_number(dollar_string: str) -> int:
+    number = int(Decimal(sub(r"[^\d.]", "", dollar_string)))
+    return number
+
+
+def remove_percentage(percentage_string: str) -> int:
+    string_array = percentage_string.split("%")
+    return int(string_array[0])

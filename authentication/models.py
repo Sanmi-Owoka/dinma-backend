@@ -201,3 +201,28 @@ class Referral(BaseModel):
     type = models.CharField(
         choices=REFERRAL_TYPES, max_length=200, null=True, blank=True
     )
+
+
+class InsuranceDetails(BaseModel):
+    PATIENT_RELATIONSHIP_CHOICES = (
+        ("self", "self"),
+        ("dependent", "dependent"),
+    )
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="user_insurance_details"
+    )
+    insurance_company_name = models.CharField(max_length=255, null=True, blank=True)
+    insurance_phone_number = models.CharField(max_length=255, null=True, blank=True)
+    insurance_policy_number = models.CharField(max_length=255, null=True, blank=True)
+    insurance_group_number = models.CharField(max_length=255, null=True, blank=True)
+    insured_date_of_birth = models.CharField(max_length=255, null=True, blank=True)
+    patient_relationship = models.CharField(
+        choices=PATIENT_RELATIONSHIP_CHOICES, max_length=255, null=True, blank=True
+    )
+    self_pay = models.DecimalField(
+        decimal_places=2, max_digits=12, null=True, blank=True
+    )
+    insurance_coverage = models.DecimalField(
+        decimal_places=2, max_digits=12, null=True, blank=True
+    )
