@@ -109,6 +109,16 @@ class PatientAuthenticationViewSet(GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            check_email_exists = User.objects.filter(
+                email=serialized_input.validated_data["email"].lower(),
+                user_type="patient",
+            ).exists()
+            if check_email_exists:
+                return Response(
+                    convert_to_error_message("User with this email already exists"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             password = serialized_input.validated_data["password"]
             confirm_password = serialized_input.validated_data["confirm_password"]
 
