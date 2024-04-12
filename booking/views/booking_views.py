@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from django.utils.timezone import make_aware
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -21,11 +21,10 @@ from authentication.serializers.provider_authentication_serializers import (
 )
 from booking.functools import generate_unique_id, recommend_providers
 from booking.models import UserBookingDetails
-from booking.serializers.booking_serializer import (
+from booking.serializers.booking_serializer import (  # GetProviderBookingSerializer,
     BookingSerializer,
     ConfirmBookingSerializer,
     CreateBookingSerializer,
-    GetProviderBookingSerializer,
     ListUserBookingsSerializer,
     RejectBookingSerializer,
 )
@@ -279,79 +278,79 @@ class BookingViewSet(GenericViewSet):
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
             )
 
-    @action(
-        methods=["GET"],
-        detail=False,
-        url_name="get_all_practitioner_bookings",
-        serializer_class=GetProviderBookingSerializer,
-    )
-    def get_all_practitioner_bookings(self, request):
-        try:
-            user = request.user
-            logged_in_user = User.objects.get(id=user.id)
-
-            if logged_in_user.user_type != "health_provider":
-                return Response(
-                    convert_to_error_message(
-                        "You are not authorized for this function"
-                    ),
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            booking_details = UserBookingDetails.objects.filter(
-                practitioner=logged_in_user
-            )
-            return Response(
-                convert_to_success_message_serialized_data(
-                    serialized_data=paginate(
-                        booking_details,
-                        int(request.query_params.get("page", 1)),
-                        self.get_serializer,
-                        {"request": request},
-                        int(request.query_params.get("limit", 10)),
-                    )
-                ),
-                status=status.HTTP_200_OK,
-            )
-        except Exception as err:
-            return Response(
-                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
-            )
-
-    @action(
-        methods=["GET"],
-        detail=False,
-        url_name="get_all_patient_bookings",
-        serializer_class=CreateBookingSerializer,
-    )
-    def get_all_patient_bookings(self, request):
-        try:
-            user = request.user
-            logged_in_user = User.objects.get(id=user.id)
-            if logged_in_user.user_type != "patient":
-                return Response(
-                    convert_to_error_message(
-                        "user is not authorized for this function"
-                    ),
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            booking_details = UserBookingDetails.objects.filter(patient=logged_in_user)
-            return Response(
-                convert_to_success_message_serialized_data(
-                    serialized_data=paginate(
-                        booking_details,
-                        int(request.query_params.get("page", 1)),
-                        self.get_serializer,
-                        {"request": request},
-                        int(request.query_params.get("limit", 10)),
-                    )
-                ),
-                status=status.HTTP_200_OK,
-            )
-        except Exception as err:
-            return Response(
-                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
-            )
+    # @action(
+    #     methods=["GET"],
+    #     detail=False,
+    #     url_name="get_all_practitioner_bookings",
+    #     serializer_class=GetProviderBookingSerializer,
+    # )
+    # def get_all_practitioner_bookings(self, request):
+    #     try:
+    #         user = request.user
+    #         logged_in_user = User.objects.get(id=user.id)
+    #
+    #         if logged_in_user.user_type != "health_provider":
+    #             return Response(
+    #                 convert_to_error_message(
+    #                     "You are not authorized for this function"
+    #                 ),
+    #                 status=status.HTTP_400_BAD_REQUEST,
+    #             )
+    #         booking_details = UserBookingDetails.objects.filter(
+    #             practitioner=logged_in_user
+    #         )
+    #         return Response(
+    #             convert_to_success_message_serialized_data(
+    #                 serialized_data=paginate(
+    #                     booking_details,
+    #                     int(request.query_params.get("page", 1)),
+    #                     self.get_serializer,
+    #                     {"request": request},
+    #                     int(request.query_params.get("limit", 10)),
+    #                 )
+    #             ),
+    #             status=status.HTTP_200_OK,
+    #         )
+    #     except Exception as err:
+    #         return Response(
+    #             convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+    #         )
+    #
+    # @action(
+    #     methods=["GET"],
+    #     detail=False,
+    #     url_name="get_all_patient_bookings",
+    #     serializer_class=CreateBookingSerializer,
+    # )
+    # def get_all_patient_bookings(self, request):
+    #     try:
+    #         user = request.user
+    #         logged_in_user = User.objects.get(id=user.id)
+    #         if logged_in_user.user_type != "patient":
+    #             return Response(
+    #                 convert_to_error_message(
+    #                     "user is not authorized for this function"
+    #                 ),
+    #                 status=status.HTTP_400_BAD_REQUEST,
+    #             )
+    #
+    #         booking_details = UserBookingDetails.objects.filter(patient=logged_in_user)
+    #         return Response(
+    #             convert_to_success_message_serialized_data(
+    #                 serialized_data=paginate(
+    #                     booking_details,
+    #                     int(request.query_params.get("page", 1)),
+    #                     self.get_serializer,
+    #                     {"request": request},
+    #                     int(request.query_params.get("limit", 10)),
+    #                 )
+    #             ),
+    #             status=status.HTTP_200_OK,
+    #         )
+    #     except Exception as err:
+    #         return Response(
+    #             convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+    #         )
 
     @action(
         methods=["POST"],
@@ -563,12 +562,51 @@ class BookingViewSet(GenericViewSet):
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
             )
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="status", description="booking status", type=str, required=False
+            ),
+        ]
+    )
     @action(methods=["GET"], detail=False, serializer_class=ListUserBookingsSerializer)
     def get_patient_bookings(self, request):
         try:
             user = request.user
+            booking_status = request.GET.get("status")
             logged_in_user = User.objects.get(id=user.id)
-            user_bookings = UserBookingDetails.objects.filter(patient=logged_in_user)
+            if logged_in_user.user_type != "patient":
+                return Response(
+                    convert_to_error_message(
+                        "user is not authorized for this function"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if booking_status:
+                booking_status = booking_status.lower()
+                status_choices = [
+                    "pending",
+                    "requested",
+                    "accepted",
+                    "rejected",
+                    "failed",
+                    "succeeded",
+                ]
+                if booking_status not in status_choices:
+                    return Response(
+                        convert_to_error_message(
+                            f"Invalid status {booking_status}, status choices are {status_choices}"
+                        ),
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                user_bookings = UserBookingDetails.objects.filter(
+                    patient=logged_in_user, status=booking_status
+                )
+            else:
+                user_bookings = UserBookingDetails.objects.filter(
+                    patient=logged_in_user
+                )
             return Response(
                 convert_to_success_message_serialized_data(
                     paginate(
@@ -586,14 +624,51 @@ class BookingViewSet(GenericViewSet):
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
             )
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="status", description="booking status", type=str, required=False
+            ),
+        ]
+    )
     @action(methods=["GET"], detail=False, serializer_class=ListUserBookingsSerializer)
     def get_provider_bookings(self, request):
         try:
             user = request.user
+            booking_status = request.GET.get("status")
             logged_in_user = User.objects.get(id=user.id)
-            user_bookings = UserBookingDetails.objects.filter(
-                practitioner=logged_in_user
-            )
+
+            if logged_in_user.user_type != "health_provider":
+                return Response(
+                    convert_to_error_message(
+                        "You are not authorized for this function"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if booking_status:
+                status_choices = [
+                    "pending",
+                    "requested",
+                    "accepted",
+                    "rejected",
+                    "failed",
+                    "succeeded",
+                ]
+                if booking_status not in status_choices:
+                    return Response(
+                        convert_to_error_message(
+                            f"Invalid status {booking_status}, status choices are {status_choices}"
+                        ),
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                user_bookings = UserBookingDetails.objects.filter(
+                    practitioner=logged_in_user, status=booking_status
+                )
+            else:
+                user_bookings = UserBookingDetails.objects.filter(
+                    practitioner=logged_in_user
+                )
             return Response(
                 convert_to_success_message_serialized_data(
                     paginate(
