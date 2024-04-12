@@ -575,6 +575,14 @@ class BookingViewSet(GenericViewSet):
             user = request.user
             booking_status = request.GET.get("status")
             logged_in_user = User.objects.get(id=user.id)
+            if logged_in_user.user_type != "patient":
+                return Response(
+                    convert_to_error_message(
+                        "user is not authorized for this function"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             if booking_status:
                 booking_status = booking_status.lower()
                 status_choices = [
@@ -629,6 +637,15 @@ class BookingViewSet(GenericViewSet):
             user = request.user
             booking_status = request.GET.get("status")
             logged_in_user = User.objects.get(id=user.id)
+
+            if logged_in_user.user_type != "health_provider":
+                return Response(
+                    convert_to_error_message(
+                        "You are not authorized for this function"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             if booking_status:
                 status_choices = [
                     "pending",
