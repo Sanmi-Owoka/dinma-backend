@@ -33,6 +33,7 @@ from utility.helpers.functools import (  # decrypt_simple_data,; decrypt_user_da
     convert_success_message,
     convert_to_error_message,
     convert_to_success_message_serialized_data,
+    decrypt,
     paginate,
     success_booking_response,
 )
@@ -190,7 +191,7 @@ class BookingViewSet(GenericViewSet):
                 )
 
             provider = provider.first()
-            fullname = f"{provider.first_name} {provider.last_name}"
+            fullname = f"{decrypt(provider.first_name)} {decrypt(provider.last_name)}"
             if provider.user_type != "health_provider":
                 return Response(
                     convert_to_error_message(
@@ -234,6 +235,15 @@ class BookingViewSet(GenericViewSet):
                     ),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+            if booking_details.status == "pending":
+                return Response(
+                    convert_to_error_message(
+                        f"The booking with id {booking_id} is already requested"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             if booking_details.patient != logged_in_user:
                 return Response(
                     convert_to_error_message(
@@ -247,16 +257,24 @@ class BookingViewSet(GenericViewSet):
             booking_details.status = "pending"
             booking_details.save()
 
+            patient_fullname = (
+                f"{decrypt(booking_details.patient.first_name)} "
+                f"{decrypt(booking_details.patient.last_name)}"
+            )
+
             # try:
             subject = "Inhouse Visit Booking Request"
             from_email = settings.DEFAULT_FROM_EMAIL
             body = render_to_string(
-                "email/practitioner_booking_request.html",
+                "email/care-request.html",
                 {
                     "fullname": fullname,
+                    "patient_name": patient_fullname,
                     "date_time_of_care": date_time_of_care,
                     "age_of_patient": booking_details.age_of_patient,
                     "zipcode": booking_details.zipcode,
+                    "symptoms": booking_details.symptom,
+                    "address": decrypt(booking_details.patient.address),
                 },
             )
             message = EmailMessage(
@@ -420,7 +438,7 @@ class BookingViewSet(GenericViewSet):
             provider_criteria = provider_criteria.first()
 
             patient = booking_details.patient
-            fullname = f"{patient.first_name} {patient.last_name}"
+            fullname = f"{decrypt(patient.first_name)} {decrypt(patient.last_name)}"
             date_time_of_care = booking_details.date_time_of_care
 
             booking_details.status = "accepted"
@@ -434,17 +452,17 @@ class BookingViewSet(GenericViewSet):
             ).delete()
 
             booking_details.save()
+            provider_name = f"{decrypt(logged_in_user.first_name)} {decrypt(logged_in_user.last_name)}"
 
             # try:
             subject = "Booking Request Confirmed"
             from_email = settings.DEFAULT_FROM_EMAIL
             body = render_to_string(
-                "email/confirmed_booking_request.html",
+                "email/consulation-accepted.html",
                 {
                     "fullname": fullname,
-                    "date_time_of_care": date_time_of_care,
-                    "age_of_patient": booking_details.age_of_patient,
-                    "zipcode": booking_details.zipcode,
+                    "date": date_time_of_care,
+                    "provider_name": provider_name,
                 },
             )
             message = EmailMessage(
@@ -460,7 +478,6 @@ class BookingViewSet(GenericViewSet):
             return Response(
                 convert_success_message("Booking had been successfully confirmed")
             )
-
         except Exception as err:
             return Response(
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
