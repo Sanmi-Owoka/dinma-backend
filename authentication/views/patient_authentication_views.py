@@ -59,6 +59,30 @@ class PatientAuthenticationViewSet(GenericViewSet):
     def get_queryset(self):
         return User.objects.filter(id=self.request.user.id)
 
+    @action(methods=["GET"], detail=True, permission_classes=[AllowAny])
+    def get_user_token(self, request, *args, **kwargs):
+        try:
+            user_id = kwargs.get("pk")
+            user = User.objects.filter(id=user_id)
+            if not user.exists():
+                return Response(
+                    convert_to_error_message("user not found"),
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            user = user.first()
+            token = RefreshToken.for_user(user)
+            return Response(
+                {
+                    "token": str(token.access_token),
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
     @action(methods=["GET"], detail=False, url_name="patient_details")
     def patient_details(self, request):
         try:
