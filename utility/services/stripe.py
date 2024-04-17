@@ -76,6 +76,46 @@ class StripeHelper:
         self.test_api_key = settings.STRIPE_TEST_SECRET_KEY
         # self.helper = stripe.api_key(self.test_api_key)
 
+    def create_payment_method(
+        self, card_number: str, exp_month: int, exp_year: int, cvc: str
+    ) -> dict:
+        try:
+            payment_method = stripe.PaymentMethod.create(
+                type="card",
+                card={
+                    "number": f"{card_number}",
+                    "exp_month": exp_month,
+                    "exp_year": exp_year,
+                    "cvc": f"{cvc}",
+                },
+            )
+            return {"status": True, "data": payment_method}
+
+        except stripe._error.CardError as e:
+            return {"status": False, "exception": "CardError", "message": f"{e}"}
+        except stripe.error.RateLimitError as e:
+            return {"status": False, "exception": "RateLimitError", "message": f"{e}"}
+        except stripe.error.InvalidRequestError as e:
+            return {
+                "status": False,
+                "exception": "InvalidRequestError",
+                "message": f"{e}",
+            }
+        except stripe.error.APIConnectionError as e:
+            return {
+                "status": False,
+                "exception": "APIConnectionError",
+                "message": f"{e}",
+            }
+        except stripe.error.StripeError as e:
+            return {"status": False, "exception": "StripeError", "message": f"{e}"}
+        except Exception as e:
+            return {
+                "status": False,
+                "exception": "Out of Scope Exception",
+                "message": f"{e}",
+            }
+
     def create_customer(self, customer_id: str, **kwargs):
         try:
             customer = stripe.Customer.create(id=str(customer_id), **kwargs)
@@ -160,12 +200,11 @@ class StripeHelper:
                 "message": f"{e}",
             }
 
-    def setup_intent(self, customer_id: str):
+    def setup_intent(self, customer_id: str, pm_id: str):
         try:
             intent = stripe.SetupIntent.create(
                 customer=customer_id,
-                # payment_method_types=["card"],
-                automatic_payment_methods={"enabled": True},
+                payment_method=pm_id,
             )
 
             return {"status": True, "data": intent}
