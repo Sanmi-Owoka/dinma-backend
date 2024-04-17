@@ -203,17 +203,18 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
         practice_criteria: str = serialized_data["practice_criteria"]["id"]
 
         request = self.context.get("request")
-        date_care_is_needed = request.data["date_care_is_needed"]
-        date_time_obj = (
-            PractitionerAvailableDateTime.objects.filter(
-                provider_criteria__id=practice_criteria,
-                available_date_time__date=date_care_is_needed,
+        if request.data.get("date_care_is_needed"):
+            date_care_is_needed = request.data["date_care_is_needed"]
+            date_time_obj = (
+                PractitionerAvailableDateTime.objects.filter(
+                    provider_criteria__id=practice_criteria,
+                    available_date_time__date=date_care_is_needed,
+                )
+                .values_list("available_date_time", flat=True)
+                .distinct()
             )
-            .values_list("available_date_time", flat=True)
-            .distinct()
-        )
-        date_time_list = list(date_time_obj)
-        response["available_date_time"] = date_time_list
+            date_time_list = list(date_time_obj)
+            response["available_date_time"] = date_time_list
         return response
 
     def get_first_name(self, instance):
