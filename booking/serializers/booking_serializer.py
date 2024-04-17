@@ -1,9 +1,11 @@
 from rest_framework import serializers
 
+from authentication.models import PractitionerPracticeCriteria
 from authentication.serializers.provider_authentication_serializers import (
     SimpleDecryptedProviderDetails,
 )
 from booking.models import UserBookingDetails
+from utility.helpers.functools import decrypt
 
 
 class BookingSerializer(serializers.ModelSerializer):
@@ -177,12 +179,20 @@ class ListUserBookingsSerializer(serializers.ModelSerializer):
         model = UserBookingDetails
         fields = "__all__"
 
-    def get_practitioner(self, instance):
-        try:
-            if instance.practitioner:
-                return SimpleDecryptedProviderDetails(instance.practitioner).data
-            else:
-                return None
-        except Exception as e:
-            print(e)
-            return None
+    def to_representation(self, instance: UserBookingDetails):
+        response = super().to_representation(instance)
+        if instance.practitioner:
+            criteria = PractitionerPracticeCriteria.objects.get(
+                user=instance.practitioner
+            )
+            provider = {
+                "id": instance.practitioner.id,
+                "first_name": decrypt(instance.practitioner.first_name),
+                "last_name": decrypt(instance.practitioner.last_name),
+                "title": criteria.practice_name,
+            }
+            response["practitioner"] = provider
+        else:
+            response["practitioner"] = None
+
+        return response
