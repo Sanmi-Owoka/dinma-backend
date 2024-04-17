@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from authentication.models import (
+    PractitionerAvailableDateTime,
     PractitionerPracticeCriteria,
     ProviderQualification,
     User,
@@ -196,6 +197,25 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
             "practice_criteria",
         ]
 
+    def to_representation(self, instance: User):
+        response = super().to_representation(instance)
+        serialized_data = dict(response)
+        practice_criteria: str = serialized_data["practice_criteria"]["id"]
+
+        request = self.context.get("request")
+        date_care_is_needed = request.data["date_care_is_needed"]
+        date_time_obj = (
+            PractitionerAvailableDateTime.objects.filter(
+                provider_criteria__id=practice_criteria,
+                available_date_time__date=date_care_is_needed,
+            )
+            .values_list("available_date_time", flat=True)
+            .distinct()
+        )
+        date_time_list = list(date_time_obj)
+        response["available_date_time"] = date_time_list
+        return response
+
     def get_first_name(self, instance):
         try:
             return decrypt(instance.first_name)
@@ -212,7 +232,10 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
 
     def get_photo(self, instance):
         try:
-            return self.context["request"].build_absolute_uri(instance.photo.url)
+            if instance.photo:
+                return self.context["request"].build_absolute_uri(instance.photo.url)
+            else:
+                return None
         except Exception as e:
             print("Error", e)
             return None
