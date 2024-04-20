@@ -199,22 +199,24 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
 
     def to_representation(self, instance: User):
         response = super().to_representation(instance)
+        print(dict(response))
         serialized_data = dict(response)
         practice_criteria: str = serialized_data["practice_criteria"]["id"]
 
         request = self.context.get("request")
-        if request.data.get("date_care_is_needed"):
-            date_care_is_needed = request.data["date_care_is_needed"]
-            date_time_obj = (
-                PractitionerAvailableDateTime.objects.filter(
-                    provider_criteria__id=practice_criteria,
-                    available_date_time__date=date_care_is_needed,
+        if request:
+            if request.data.get("date_care_is_needed"):
+                date_care_is_needed = request.data["date_care_is_needed"]
+                date_time_obj = (
+                    PractitionerAvailableDateTime.objects.filter(
+                        provider_criteria__id=practice_criteria,
+                        available_date_time__date=date_care_is_needed,
+                    )
+                    .values_list("available_date_time", flat=True)
+                    .distinct()
                 )
-                .values_list("available_date_time", flat=True)
-                .distinct()
-            )
-            date_time_list = list(date_time_obj)
-            response["available_date_time"] = date_time_list
+                date_time_list = list(date_time_obj)
+                response["available_date_time"] = date_time_list
         return response
 
     def get_first_name(self, instance):
@@ -260,3 +262,11 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
         except Exception as e:
             print("Error", e)
             return None
+
+
+class PractitionerAvailableDateTimeSerializer(serializers.Serializer):
+    available_days = serializers.ListField(
+        child=serializers.CharField(
+            required=False, max_length=255, trim_whitespace=True, write_only=True
+        )
+    )
