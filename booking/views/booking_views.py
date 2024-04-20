@@ -701,3 +701,53 @@ class BookingViewSet(GenericViewSet):
             return Response(
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
             )
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_name="Cancel Patient Booking",
+        serializer_class=RejectBookingSerializer,
+    )
+    def cancel_patient_booking(self, request):
+        try:
+            user = request.user
+            logged_in_user = User.objects.get(id=user.id)
+            if logged_in_user.user_type != "patient":
+                return Response(
+                    convert_to_error_message(
+                        "user is not authorized for this function"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(
+                        convert_serializer_errors_from_dict_to_list(
+                            serialized_input.errors
+                        )
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            booking_id = serialized_input.validated_data["booking_id"]
+            booking_details = UserBookingDetails.objects.filter(id=booking_id)
+            if not booking_details.exists():
+                return Response(
+                    convert_to_error_message(f"No booking found with id {booking_id}"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            booking_details = booking_details.first()
+            booking_details.status = "failed"
+            booking_details.reason = serialized_input.validated_data["reason"]
+            booking_details.save()
+            return Response(
+                convert_success_message("Booking has been cancelled"),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )

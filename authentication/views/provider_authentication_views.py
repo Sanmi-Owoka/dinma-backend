@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from authentication.models import (
+    PractitionerAvailableDateTime,
     PractitionerPracticeCriteria,
     ProviderQualification,
     Referral,
@@ -17,6 +18,7 @@ from authentication.models import (
 )
 from authentication.serializers.provider_authentication_serializers import (
     OnboardPractionerSerializer,
+    PractitionerAvailableDateTimeSerializer,
     SimpleDecryptedProviderDetails,
 )
 from authentication.utils import start_schedule_background_tasks
@@ -40,7 +42,7 @@ class PractionerViewSet(GenericViewSet):
     serializer_class = OnboardPractionerSerializer
 
     def get_queryset(self):
-        return User.objects.filter(id=self.request.user.id)
+        return User.objects.get(id=self.request.user.id)
 
     @action(
         methods=["POST"],
@@ -226,6 +228,56 @@ class PractionerViewSet(GenericViewSet):
                 ),
                 status=status.HTTP_200_OK,
             )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_name="create availability",
+        serializer_class=PractitionerAvailableDateTimeSerializer,
+    )
+    def create_availability(self, request):
+        try:
+            user = self.get_queryset()
+
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(
+                        convert_serializer_errors_from_dict_to_list(
+                            serialized_input.errors
+                        )
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            practice_criteria = PractitionerPracticeCriteria.objects.get(user=user)
+
+            practice_criteria.available_days = []
+            practice_criteria.save()
+
+            PractitionerAvailableDateTime.objects.filter(
+                provider_criteria=practice_criteria
+            ).delete()
+
+            start_schedule_background_tasks(
+                days_and_time=serialized_input.validated_data["available_days"],
+                provider_criteria=practice_criteria,
+            )
+            practice_criteria.available_days = serialized_input.validated_data[
+                "available_days"
+            ]
+            practice_criteria.save()
+
+            output_response = SimpleDecryptedProviderDetails(user).data
+
+            return Response(
+                convert_to_success_message_serialized_data(output_response),
+                status=status.HTTP_201_CREATED,
+            )
+
         except Exception as err:
             return Response(
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST

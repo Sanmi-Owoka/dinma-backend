@@ -181,6 +181,17 @@ class ListUserBookingsSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance: UserBookingDetails):
         response = super().to_representation(instance)
+
+        response["patient"] = {
+            "id": instance.patient.id,
+            "first_name": decrypt(instance.patient.first_name),
+            "last_name": decrypt(instance.patient.last_name),
+            "email": instance.patient.email,
+        }
+        if instance.patient.photo:
+            response["patient"]["photo"] = instance.patient.photo.url
+        response["patient"]["photo"] = None
+
         if instance.practitioner:
             criteria = PractitionerPracticeCriteria.objects.get(
                 user=instance.practitioner
@@ -191,6 +202,10 @@ class ListUserBookingsSerializer(serializers.ModelSerializer):
                 "last_name": decrypt(instance.practitioner.last_name),
                 "title": criteria.practice_name,
             }
+            if instance.practitioner.photo:
+                provider["photo"] = instance.practitioner.photo.url
+            else:
+                provider["photo"] = None
             response["practitioner"] = provider
         else:
             response["practitioner"] = None
