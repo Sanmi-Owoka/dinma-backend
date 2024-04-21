@@ -200,6 +200,8 @@ class ListUserBookingsSerializer(serializers.ModelSerializer):
                 "id": instance.practitioner.id,
                 "first_name": decrypt(instance.practitioner.first_name),
                 "last_name": decrypt(instance.practitioner.last_name),
+                "email": instance.practitioner.email,
+                "gender": instance.practitioner.gender,
                 "title": criteria.practice_name,
             }
             if instance.practitioner.photo:
@@ -211,3 +213,9 @@ class ListUserBookingsSerializer(serializers.ModelSerializer):
             response["practitioner"] = None
 
         return response
+
+
+class RescheduleBookingRequestSerializer(serializers.Serializer):
+    booking_id = serializers.UUIDField(required=True)
+    day_care_is_needed = serializers.DateField(required=False)
+    date_time_is_needed = serializers.DateTimeField(required=False)

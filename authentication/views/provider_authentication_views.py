@@ -2,7 +2,7 @@ import datetime
 
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -278,6 +278,59 @@ class PractionerViewSet(GenericViewSet):
                 status=status.HTTP_201_CREATED,
             )
 
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_name="Get available dates",
+        permission_classes=[AllowAny],
+    )
+    def get_available_dates(self, request):
+        try:
+            user = self.get_queryset()
+            practice_criteria = PractitionerPracticeCriteria.objects.get(user=user)
+            return Response(
+                convert_to_success_message_serialized_data(
+                    practice_criteria.available_days
+                ),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="email", description="booking status", type=str, required=False
+            ),
+        ]
+    )
+    @action(
+        methods=["GET"], detail=False, serializer_class=SimpleDecryptedProviderDetails
+    )
+    def get_health_provider_details(self, request):
+        try:
+            email = request.query_params.get("email", None)
+
+            provider = User.objects.filter(email=email)
+            if not provider.exists():
+                return Response(
+                    convert_to_error_message("No provider found"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            provider = provider.first()
+            output_response = self.get_serializer(provider)
+
+            return Response(
+                convert_to_success_message_serialized_data(output_response.data),
+                status=status.HTTP_200_OK,
+            )
         except Exception as err:
             return Response(
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
