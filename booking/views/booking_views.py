@@ -756,10 +756,10 @@ class BookingViewSet(GenericViewSet):
     @action(
         methods=["POST"],
         detail=False,
-        url_name="reschedule_booking_request",
+        url_name="get_reschedule_available_time",
         serializer_class=RescheduleBookingRequestSerializer,
     )
-    def reschedule_booking_request(self, request):
+    def get_reschedule_available_time(self, request):
         try:
             logged_in_user = User.objects.get(id=request.user.id)
             if logged_in_user.user_type != "patient":
