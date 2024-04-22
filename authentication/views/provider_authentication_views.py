@@ -289,7 +289,7 @@ class PractionerViewSet(GenericViewSet):
         url_name="Get available dates",
         permission_classes=[AllowAny],
     )
-    def get_available_dates(self, request):
+    def get_available_days(self, request):
         try:
             user = self.get_queryset()
             practice_criteria = PractitionerPracticeCriteria.objects.get(user=user)
