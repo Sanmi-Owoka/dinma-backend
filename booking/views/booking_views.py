@@ -27,6 +27,7 @@ from booking.serializers.booking_serializer import (  # GetProviderBookingSerial
     CreateBookingSerializer,
     ListUserBookingsSerializer,
     RejectBookingSerializer,
+    RescheduleBookingRequestSerializer,
 )
 from utility.helpers.functools import (  # decrypt_simple_data,; decrypt_user_data,; encrypt,
     convert_serializer_errors_from_dict_to_list,
@@ -745,6 +746,183 @@ class BookingViewSet(GenericViewSet):
             booking_details.save()
             return Response(
                 convert_success_message("Booking has been cancelled"),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_name="get_reschedule_available_time",
+        serializer_class=RescheduleBookingRequestSerializer,
+    )
+    def get_reschedule_available_time(self, request):
+        try:
+            logged_in_user = User.objects.get(id=request.user.id)
+            if logged_in_user.user_type != "patient":
+                return Response(
+                    convert_to_error_message(
+                        "user is not authorized for this function"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(
+                        convert_serializer_errors_from_dict_to_list(
+                            serialized_input.errors
+                        )
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            booking_id = serialized_input.validated_data["booking_id"]
+            booking_details = UserBookingDetails.objects.filter(id=booking_id)
+            if not booking_details.exists():
+                return Response(
+                    convert_to_error_message(f"No booking found with id {booking_id}"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            booking_details = booking_details.first()
+
+            provider = booking_details.practitioner
+            if not provider:
+                return Response(
+                    convert_to_error_message(f"No provider found with id {booking_id}"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            pratice_criteria = PractitionerPracticeCriteria.objects.get(user=provider)
+            if not pratice_criteria:
+                return Response(
+                    convert_to_error_message(
+                        f"No practice criteria found with provider with email "
+                        f"{provider.email}"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            day_care_is_needed = serialized_input.validated_data["day_care_is_needed"]
+
+            get_available_date_times = PractitionerAvailableDateTime.objects.filter(
+                provider_criteria=pratice_criteria,
+                available_date_time__date=day_care_is_needed,
+            )
+
+            if not get_available_date_times.exists():
+                return Response(
+                    convert_to_error_message(
+                        "No available date time found with provider on date entered"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            date_time_available: list = get_available_date_times.values_list(
+                "available_date_time", flat=True
+            )
+
+            response = {
+                "provider_email": provider.email,
+                "available_date_time": date_time_available,
+            }
+            return Response(
+                convert_to_success_message_serialized_data(response),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_name="reschedule_patient_booking",
+        serializer_class=RescheduleBookingRequestSerializer,
+    )
+    def reschedule_patient_booking(self, request):
+        try:
+            logged_in_user = User.objects.get(id=request.user.id)
+            if logged_in_user.user_type != "patient":
+                return Response(
+                    convert_to_error_message(
+                        "user is not authorized for this function"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            patient_fullname = f"{decrypt(logged_in_user.first_name)} {decrypt(logged_in_user.last_name)}"
+
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(
+                        convert_serializer_errors_from_dict_to_list(
+                            serialized_input.errors
+                        )
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            booking_id = serialized_input.validated_data["booking_id"]
+            booking_details = UserBookingDetails.objects.filter(
+                patient=logged_in_user, id=booking_id
+            )
+            if not booking_details.exists():
+                return Response(
+                    convert_to_error_message(f"No booking found with id {booking_id}"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            booking_details = booking_details.first()
+
+            provider = booking_details.practitioner
+            if not provider:
+                return Response(
+                    convert_to_error_message(f"No provider found with id {booking_id}"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            fullname = f"{decrypt(provider.first_name)} {decrypt(provider.last_name)}"
+
+            date_time_care_is_needed = serialized_input.validated_data[
+                "date_time_care_is_needed"
+            ]
+            booking_details.date_time_of_care = date_time_care_is_needed
+            booking_details.date_care_is_needed = date_time_care_is_needed.date()
+            booking_details.status = "requested"
+
+            # try:
+            subject = "Reschedule booking request"
+            from_email = settings.DEFAULT_FROM_EMAIL
+            body = render_to_string(
+                "email/care-request.html",
+                {
+                    "fullname": fullname,
+                    "patient_name": patient_fullname,
+                    "date_time_of_care": date_time_care_is_needed,
+                    "age_of_patient": booking_details.age_of_patient,
+                    "zipcode": booking_details.zipcode,
+                    "symptoms": booking_details.symptom,
+                    "address": decrypt(booking_details.patient.address),
+                },
+            )
+            message = EmailMessage(
+                subject,
+                body,
+                to=[provider.email],
+                from_email=from_email,
+                bcc=[logged_in_user.email],
+            )
+            message.content_subtype = "html"
+            message.send(fail_silently=True)
+            booking_details.save()
+
+            output_response = ListUserBookingsSerializer(booking_details)
+            return Response(
+                convert_to_success_message_serialized_data(output_response.data),
                 status=status.HTTP_200_OK,
             )
         except Exception as err:
