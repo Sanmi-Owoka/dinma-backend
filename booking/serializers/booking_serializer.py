@@ -218,4 +218,4 @@ class ListUserBookingsSerializer(serializers.ModelSerializer):
 class RescheduleBookingRequestSerializer(serializers.Serializer):
     booking_id = serializers.UUIDField(required=True)
     day_care_is_needed = serializers.DateField(required=False)
-    date_time_is_needed = serializers.DateTimeField(required=False)
+    date_time_care_is_needed = serializers.DateTimeField(required=False)
