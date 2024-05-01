@@ -22,6 +22,7 @@ from authentication.serializers.provider_authentication_serializers import (
     SimpleDecryptedProviderDetails,
 )
 from authentication.utils import start_schedule_background_tasks
+from booking.models import UserBookingDetails
 from utility.helpers.functools import (
     base64_to_data,
     convert_serializer_errors_from_dict_to_list,
@@ -329,6 +330,30 @@ class PractionerViewSet(GenericViewSet):
 
             return Response(
                 convert_to_success_message_serialized_data(output_response.data),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(methods=["GET"], detail=False)
+    def get_total_earnings(self, request):
+        try:
+            user = self.get_queryset()
+            total_successful_bookings = UserBookingDetails.objects.filter(
+                practitioner=user, status="succeeded"
+            )
+            total_earnings = total_successful_bookings.count() * 150
+
+            return Response(
+                {
+                    "status": "success",
+                    "message": "request successful",
+                    "data": {
+                        "total_earnings": total_earnings,
+                    },
+                },
                 status=status.HTTP_200_OK,
             )
         except Exception as err:
