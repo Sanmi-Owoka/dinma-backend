@@ -140,10 +140,10 @@ class PractionerViewSet(GenericViewSet):
                     )
 
             age_range = serialized_input.validated_data["age_range"].capitalize()
-            if age_range not in ["Pediatrician", "Adult", "Both"]:
+            if age_range not in ["Pediatrics", "Adult", "Both"]:
                 return Response(
                     convert_to_error_message(
-                        f"you entered {age_range}, age range choices are Pediatrician and Adult"
+                        f"you entered {age_range}, age range choices are Pediatrics and Adult"
                     ),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
@@ -161,7 +161,7 @@ class PractionerViewSet(GenericViewSet):
             )
             new_provider_qualification.save()
 
-            if age_range == "Pediatrician":
+            if age_range == "Pediatrics":
                 maximum_age = 18
                 minimum_age = 0
             elif age_range == "Adult":
