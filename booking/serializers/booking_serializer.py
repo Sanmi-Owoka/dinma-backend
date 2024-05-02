@@ -187,6 +187,8 @@ class ListUserBookingsSerializer(serializers.ModelSerializer):
             "first_name": decrypt(instance.patient.first_name),
             "last_name": decrypt(instance.patient.last_name),
             "email": instance.patient.email,
+            "address": decrypt(instance.patient.address),
+            "gender": instance.patient.gender,
         }
         if instance.patient.photo:
             response["patient"]["photo"] = instance.patient.photo.url
