@@ -22,7 +22,7 @@ from authentication.serializers.provider_authentication_serializers import (
     SimpleDecryptedProviderDetails,
 )
 from authentication.utils import start_schedule_background_tasks
-from booking.models import UserBookingDetails
+from booking.models import GeneralBookingDetails, UserBookingDetails
 from utility.helpers.functools import (
     base64_to_data,
     convert_serializer_errors_from_dict_to_list,
@@ -344,13 +344,17 @@ class PractionerViewSet(GenericViewSet):
             total_successful_bookings = UserBookingDetails.objects.filter(
                 practitioner=user, status="succeeded"
             )
-            total_earnings = total_successful_bookings.count() * 150
+            price_per_consultation = (
+                GeneralBookingDetails.objects.first().price_per_consultation
+            )
+            total_earnings = total_successful_bookings.count() * price_per_consultation
 
             return Response(
                 {
                     "status": "success",
                     "message": "request successful",
                     "data": {
+                        "total_booking_count": total_successful_bookings,
                         "total_earnings": total_earnings,
                     },
                 },
