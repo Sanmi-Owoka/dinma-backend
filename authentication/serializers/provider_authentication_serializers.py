@@ -1,3 +1,6 @@
+import datetime
+
+from django.utils.timezone import make_aware
 from rest_framework import serializers
 
 from authentication.models import (
@@ -7,6 +10,8 @@ from authentication.models import (
     User,
 )
 from utility.helpers.functools import decrypt
+
+# Getting the current date
 
 
 class OnboardPractionerSerializer(serializers.ModelSerializer):
@@ -198,8 +203,9 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
         ]
 
     def to_representation(self, instance: User):
+        current_date = make_aware(datetime.datetime.now())
         response = super().to_representation(instance)
-        print(dict(response))
+        # print(dict(response))
         serialized_data = dict(response)
         practice_criteria: str = serialized_data["practice_criteria"]["id"]
 
@@ -217,6 +223,18 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
                 )
                 date_time_list = list(date_time_obj)
                 response["available_date_time"] = date_time_list
+
+        available_days = (
+            PractitionerAvailableDateTime.objects.filter(
+                provider_criteria__id=practice_criteria,
+                available_date_time__gte=current_date,
+            )
+            .values_list("available_date_time", flat=True)
+            .distinct()
+        )
+
+        # print(available_days)
+        response["practice_criteria"]["available_days"] = list(available_days)
         return response
 
     def get_first_name(self, instance):

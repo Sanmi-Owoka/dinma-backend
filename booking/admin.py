@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import UserBookingDetails
+from .models import GeneralBookingDetails, UserBookingDetails
 
 
 @admin.register(UserBookingDetails)
@@ -18,3 +18,11 @@ class UserBookingDetailsAdmin(admin.ModelAdmin):
         "updated_at",
     ]
     search_fields = ["patient__email", "practitioner__email"]
+
+
+@admin.register(GeneralBookingDetails)
+class GeneralBookingDetailsAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "price_per_consultation",
+    ]
