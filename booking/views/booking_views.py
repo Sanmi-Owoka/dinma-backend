@@ -20,7 +20,7 @@ from authentication.serializers.provider_authentication_serializers import (
     SimpleDecryptedProviderDetails,
 )
 from booking.functools import generate_unique_id, recommend_providers
-from booking.models import UserBookingDetails
+from booking.models import GeneralBookingDetails, UserBookingDetails
 from booking.serializers.booking_serializer import (  # GetProviderBookingSerializer,
     BookingSerializer,
     ConfirmBookingSerializer,
@@ -923,6 +923,25 @@ class BookingViewSet(GenericViewSet):
             output_response = ListUserBookingsSerializer(booking_details)
             return Response(
                 convert_to_success_message_serialized_data(output_response.data),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["GET"],
+        detail=False,
+        url_name="get general booking details",
+    )
+    def get_general_booking_details(self, request):
+        try:
+            get_general_booking_details = GeneralBookingDetails.objects.first()
+            return Response(
+                {
+                    "price_per_consultation": get_general_booking_details.price_per_consultation
+                },
                 status=status.HTTP_200_OK,
             )
         except Exception as err:
