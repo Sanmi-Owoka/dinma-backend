@@ -7,7 +7,7 @@ from django.utils.timezone import make_aware
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -934,6 +934,7 @@ class BookingViewSet(GenericViewSet):
         methods=["GET"],
         detail=False,
         url_name="get general booking details",
+        permission_classes=[AllowAny],
     )
     def get_general_booking_details(self, request):
         try:
