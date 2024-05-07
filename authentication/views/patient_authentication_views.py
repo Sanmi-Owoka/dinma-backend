@@ -826,3 +826,76 @@ class PatientAuthenticationViewSet(GenericViewSet):
         except Exception as e:
             print("error", e)
             return Response({"message": [f"{e}"]}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        serializer_class=InsuranceDetailsSerializer,
+        permission_classes=[AllowAny],
+    )
+    def save_user_insurance_details(self, request):
+        try:
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(
+                        convert_serializer_errors_from_dict_to_list(
+                            serialized_input.errors
+                        )
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user_id = serialized_input.validated_data["user_id"]
+            user = User.objects.filter(id=user_id)
+            if not user.exists():
+                return Response(
+                    convert_to_error_message("User not found"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user = user.first()
+
+            insurance_company_name = serialized_input.validated_data[
+                "insurance_company_name"
+            ]
+            insurance_phone_number = serialized_input.validated_data[
+                "insurance_phone_number"
+            ]
+            insurance_policy_number = serialized_input.validated_data[
+                "insurance_policy_number"
+            ]
+            insurance_group_number = serialized_input.validated_data[
+                "insurance_group_number"
+            ]
+            insured_date_of_birth = serialized_input.validated_data[
+                "insured_date_of_birth"
+            ]
+            patient_relationship = serialized_input.validated_data[
+                "patient_relationship"
+            ]
+
+            dob_list = insured_date_of_birth.split("/")
+            if len(dob_list) != 3:
+                return Response(
+                    convert_to_error_message("Invalid date of birth"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            insurance_details_obj = InsuranceDetails.objects.create(
+                user=user,
+                insurance_company_name=insurance_company_name,
+                insurance_phone_number=insurance_phone_number,
+                insurance_policy_number=insurance_policy_number,
+                insurance_group_number=insurance_group_number,
+                insured_date_of_birth=insured_date_of_birth,
+                patient_relationship=patient_relationship,
+            )
+
+            response = self.get_serializer(insurance_details_obj)
+            return Response(
+                convert_to_success_message_serialized_data(response.data),
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            print("error", e)
+            return Response({"message": [f"{e}"]}, status=status.HTTP_400_BAD_REQUEST)
