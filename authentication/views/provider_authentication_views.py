@@ -17,6 +17,7 @@ from authentication.models import (
     User,
 )
 from authentication.serializers.provider_authentication_serializers import (
+    EditPractionerSerializer,
     OnboardPractionerSerializer,
     PractitionerAvailableDateTimeSerializer,
     SimpleDecryptedProviderDetails,
@@ -358,6 +359,132 @@ class PractionerViewSet(GenericViewSet):
                         "total_earnings": total_earnings,
                     },
                 },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(methods=["PUT"], detail=False, serializer_class=EditPractionerSerializer)
+    def update_health_provider_details(self, request):
+        try:
+            logged_in_user = self.get_queryset()
+            provider_qualification = ProviderQualification.objects.filter(
+                user=logged_in_user
+            )
+            if not provider_qualification.exists():
+                return Response(
+                    convert_to_error_message(
+                        "No qualification found, reach out to support"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            provider_qualification = provider_qualification.first()
+
+            provider_criteria = PractitionerPracticeCriteria.objects.filter(
+                user=logged_in_user
+            )
+            if not provider_criteria.exists():
+                return Response(
+                    convert_to_error_message("No criteria found, reach out to support"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            provider_criteria = provider_criteria.first()
+
+            if request.data.get("first_name"):
+                logged_in_user.first_name = encrypt(
+                    request.data.get("first_name").capitalize().strip()
+                )
+            if request.data.get("last_name"):
+                logged_in_user.last_name = encrypt(
+                    request.data.get("last_name").capitalize().strip()
+                )
+            if request.data.get("address"):
+                logged_in_user.address = encrypt(
+                    request.data.get("address").lower().strip()
+                )
+            if request.data.get("date_of_birth"):
+                date_of_birth = request.data.get("date_of_birth")
+                user_dob_date = datetime.datetime.strptime(
+                    date_of_birth, "%d-%m-%Y"
+                ).date()
+                logged_in_user.date_of_birth = user_dob_date
+            if request.data.get("gender"):
+                logged_in_user.gender = request.data.get("gender").lower().strip()
+            if request.data.get("city"):
+                logged_in_user.city = encrypt(
+                    request.data.get("city").capitalize().strip()
+                )
+            if request.data.get("state"):
+                logged_in_user.state = request.data.get("state").capitalize().strip()
+            if request.data.get("language_spoken"):
+                logged_in_user.language_spoken = request.data.get(
+                    "language_spoken"
+                ).strip()
+            if request.data.get("preferred_language"):
+                logged_in_user.preferred_language = request.data.get(
+                    "preferred_language"
+                )
+            if request.data.get("photo"):
+                logged_in_user.photo = base64_to_data(request.data.get("photo"))
+
+            if request.data.get("age_range"):
+                age_range = request.data.get("age_range")
+                if age_range not in ["Pediatrics", "Adult", "Both"]:
+                    return Response(
+                        convert_to_error_message(
+                            f"you entered {age_range}, age range choices are Pediatrics and Adult"
+                        ),
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if age_range == "Pediatrics":
+                    maximum_age = 18
+                    minimum_age = 0
+                elif age_range == "Adult":
+                    maximum_age = 100
+                    minimum_age = 18
+                else:
+                    maximum_age = 100
+                    minimum_age = 0
+
+                provider_criteria.age_range = request.data.get("age_range")
+                provider_criteria.minimum_age = minimum_age
+                provider_criteria.maximum_age = maximum_age
+
+            if request.data.get("practioner_type"):
+                provider_qualification.practioner_type = request.data.get(
+                    "practioner_type"
+                )
+
+            if request.data.get("credential_title"):
+                provider_qualification.credential_title = request.data.get(
+                    "credential_title"
+                )
+
+            if request.data.get("licensed_states") != []:
+                provider_qualification.licensed_states = request.data.get(
+                    "licensed_states"
+                )
+
+            if request.data.get("practice_name"):
+                provider_criteria.practice_name = request.data.get("practice_name")
+
+            if request.data.get("max_distance"):
+                provider_criteria.max_distance = request.data.get("max_distance")
+
+            if request.data.get("preferred_zip_codes") != []:
+                provider_criteria.preferred_zip_codes = request.data.get(
+                    "preferred_zip_codes"
+                )
+
+            logged_in_user.save()
+            provider_qualification.save()
+            provider_criteria.save()
+
+            response_data = SimpleDecryptedProviderDetails(logged_in_user)
+            return Response(
+                convert_to_success_message_serialized_data(response_data.data),
                 status=status.HTTP_200_OK,
             )
         except Exception as err:
