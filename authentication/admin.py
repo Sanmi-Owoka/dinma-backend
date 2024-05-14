@@ -103,7 +103,7 @@ class PractitionerAvailableDateTimeAdmin(admin.ModelAdmin):
 @admin.register(PractitionerPracticeCriteria)
 class PractitionerPracticeCriteriaAdmin(admin.ModelAdmin):
     list_display = ["user", "practice_name", "max_distance", "age_range"]
-    search_fields = ["provider__email"]
+    search_fields = ["user__email"]
 
 
 @admin.register(PhoneNumberVerification)
