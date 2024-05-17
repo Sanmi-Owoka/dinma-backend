@@ -567,3 +567,37 @@ class PractionerViewSet(GenericViewSet):
             return Response(
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
             )
+
+    @action(
+        methods=["PUT"], detail=False, serializer_class=UserAccountDetailsSerializer
+    )
+    def update_account_details(self, request):
+        try:
+            logged_in_user = self.get_queryset()
+            if logged_in_user.user_type != "health_provider":
+                return Response(
+                    convert_to_error_message(
+                        "You are not allowed to save account details"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(
+                        convert_serializer_errors_from_dict_to_list(
+                            serialized_input.errors
+                        )
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            serialized_input.update(serialized_input.validated_data)
+            return Response(
+                convert_to_success_message_serialized_data(serialized_input.data),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
