@@ -85,6 +85,14 @@ def convert_to_success_message_serialized_data(serialized_data: dict) -> dict:
     }
 
 
+def convert_to_success_message_with_data(message: str, serialized_data: dict) -> dict:
+    return {
+        "status": "success",
+        "message": message,
+        "data": serialized_data,
+    }
+
+
 def success_booking_response(serialized_data: dict, booking_id: str) -> dict:
     return {
         "status": "success",
