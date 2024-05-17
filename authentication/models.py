@@ -236,3 +236,12 @@ class UserCard(models.Model):
     card_type = models.CharField(max_length=255, blank=True, null=True)
     setup_id = models.CharField(max_length=255, blank=True, null=True)
     payment_method_id = models.CharField(max_length=255, blank=True, null=True)
+
+
+class UserAccountDetails(models.Model):
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="user_account_details"
+    )
+    bank_name = models.CharField(max_length=255, blank=True, null=True)
+    account_number = models.CharField(max_length=255, blank=True, null=True)
+    routing_number = models.CharField(max_length=255, blank=True, null=True)

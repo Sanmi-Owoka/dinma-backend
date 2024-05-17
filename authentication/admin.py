@@ -10,6 +10,8 @@ from .models import (
     PractitionerPracticeCriteria,
     ProviderQualification,
     User,
+    UserAccountDetails,
+    UserCard,
 )
 
 # @admin.register(User)
@@ -115,3 +117,25 @@ class PhoneNumberVerificationAdmin(admin.ModelAdmin):
         "is_verified",
     ]
     search_fields = ["phone_number"]
+
+
+@admin.register(UserCard)
+class UserCardAdmin(admin.ModelAdmin):
+    list_display = [
+        "user",
+        "last4_digit",
+        "exp_month",
+        "exp_year",
+    ]
+    search_fields = ["user__email"]
+
+
+@admin.register(UserAccountDetails)
+class UserAccountDetailsAdmin(admin.ModelAdmin):
+    list_display = [
+        "user",
+        "bank_name",
+        "account_number",
+        "routing_number",
+    ]
+    search_fields = ["user__email"]
