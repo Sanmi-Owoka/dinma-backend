@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from authentication.models import InsuranceDetails, User
+from authentication.models import InsuranceDetails, User, UserCard
 from utility.helpers.functools import decrypt
 
 
@@ -212,3 +212,32 @@ class InsuranceDetailsSerializer(serializers.ModelSerializer):
             "insured_date_of_birth": {"required": True},
             "patient_relationship": {"required": True},
         }
+
+
+class UserCardSerializer(serializers.ModelSerializer):
+    user_id = serializers.UUIDField(required=True, write_only=True)
+    cardholder_name = serializers.CharField(
+        required=True, max_length=255, write_only=True
+    )
+    card_number = serializers.CharField(required=True, max_length=255, write_only=True)
+    card_type = serializers.CharField(required=True, max_length=255, write_only=True)
+    city = serializers.CharField(required=True, max_length=255, write_only=True)
+    state = serializers.CharField(required=True, max_length=255, write_only=True)
+    zip_code = serializers.CharField(required=True, max_length=255, write_only=True)
+    card_expiry_date = serializers.CharField(
+        max_length=255, default="MM/YYYY", write_only=True
+    )
+    cvc = serializers.CharField(required=True, max_length=255, write_only=True)
+    billing_address = serializers.CharField(
+        required=True, max_length=255, write_only=True
+    )
+
+    class Meta:
+        model = UserCard
+        fields = "__all__"
+        read_only_fields = [
+            "user",
+            "last4_digit",
+            "exp_month",
+            "exp_year",
+        ]

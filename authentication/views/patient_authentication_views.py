@@ -21,6 +21,7 @@ from authentication.models import (
     PasswordReset,
     PhoneNumberVerification,
     User,
+    UserCard,
 )
 from authentication.serializers.patient_authentication_serializers import (
     ChangePasswordSerializer,
@@ -28,6 +29,7 @@ from authentication.serializers.patient_authentication_serializers import (
     ForgotPasswordSerializer,
     InsuranceDetailsSerializer,
     PatientLoginSerializer,
+    UserCardSerializer,
 )
 from authentication.utils import (
     generate_phone_unique_code,
@@ -41,6 +43,7 @@ from utility.helpers.functools import (
     convert_success_message,
     convert_to_error_message,
     convert_to_success_message_serialized_data,
+    convert_to_success_message_with_data,
     decrypt,
     decrypt_user_data,
     encrypt,
@@ -49,6 +52,7 @@ from utility.helpers.functools import (
 )
 from utility.helpers.send_sms import send_plain_SMS
 from utility.services.pverify import Pverify
+from utility.services.stripe import StripeHelper
 
 
 @extend_schema(tags=["Patient authentication endpoints"])
@@ -58,6 +62,30 @@ class PatientAuthenticationViewSet(GenericViewSet):
 
     def get_queryset(self):
         return User.objects.filter(id=self.request.user.id)
+
+    @action(methods=["GET"], detail=True, permission_classes=[AllowAny])
+    def get_user_token(self, request, *args, **kwargs):
+        try:
+            user_id = kwargs.get("pk")
+            user = User.objects.filter(id=user_id)
+            if not user.exists():
+                return Response(
+                    convert_to_error_message("user not found"),
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            user = user.first()
+            token = RefreshToken.for_user(user)
+            return Response(
+                {
+                    "token": str(token.access_token),
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
 
     @action(methods=["GET"], detail=False, url_name="patient_details")
     def patient_details(self, request):
@@ -106,6 +134,16 @@ class PatientAuthenticationViewSet(GenericViewSet):
                             serialized_input.errors
                         ),
                     },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            check_email_exists = User.objects.filter(
+                email=serialized_input.validated_data["email"].lower(),
+                user_type="patient",
+            ).exists()
+            if check_email_exists:
+                return Response(
+                    convert_to_error_message("User with this email already exists"),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -787,6 +825,230 @@ class PatientAuthenticationViewSet(GenericViewSet):
             response = self.get_serializer(insurance_details_obj)
             return Response(
                 convert_to_success_message_serialized_data(response.data),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            print("error", e)
+            return Response({"message": [f"{e}"]}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        serializer_class=InsuranceDetailsSerializer,
+        permission_classes=[AllowAny],
+    )
+    def save_user_insurance_details(self, request):
+        try:
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(
+                        convert_serializer_errors_from_dict_to_list(
+                            serialized_input.errors
+                        )
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user_id = serialized_input.validated_data["user_id"]
+            user = User.objects.filter(id=user_id)
+            if not user.exists():
+                return Response(
+                    convert_to_error_message("User not found"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user = user.first()
+
+            insurance_company_name = serialized_input.validated_data[
+                "insurance_company_name"
+            ]
+            insurance_phone_number = serialized_input.validated_data[
+                "insurance_phone_number"
+            ]
+            insurance_policy_number = serialized_input.validated_data[
+                "insurance_policy_number"
+            ]
+            insurance_group_number = serialized_input.validated_data[
+                "insurance_group_number"
+            ]
+            insured_date_of_birth = serialized_input.validated_data[
+                "insured_date_of_birth"
+            ]
+            patient_relationship = serialized_input.validated_data[
+                "patient_relationship"
+            ]
+
+            dob_list = insured_date_of_birth.split("/")
+            if len(dob_list) != 3:
+                return Response(
+                    convert_to_error_message("Invalid date of birth"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            insurance_details_obj = InsuranceDetails.objects.create(
+                user=user,
+                insurance_company_name=insurance_company_name,
+                insurance_phone_number=insurance_phone_number,
+                insurance_policy_number=insurance_policy_number,
+                insurance_group_number=insurance_group_number,
+                insured_date_of_birth=insured_date_of_birth,
+                patient_relationship=patient_relationship,
+            )
+
+            response = self.get_serializer(insurance_details_obj)
+            return Response(
+                convert_to_success_message_serialized_data(response.data),
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as e:
+            print("error", e)
+            return Response({"message": [f"{e}"]}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        serializer_class=UserCardSerializer,
+        permission_classes=[AllowAny],
+    )
+    def verify_user_card(self, request):
+        try:
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(
+                        convert_serializer_errors_from_dict_to_list(
+                            serialized_input.errors
+                        )
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            user_id = serialized_input.validated_data["user_id"]
+            user = User.objects.filter(id=user_id)
+            if not user.exists():
+                return Response(
+                    convert_to_error_message("User not found"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user = user.first()
+
+            check_card_exists = UserCard.objects.filter(user=user).exists()
+            if check_card_exists:
+                return Response(
+                    convert_to_error_message("User card already exists"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            card_number = serialized_input.validated_data["card_number"]
+            cvc = serialized_input.validated_data["cvc"]
+            city = serialized_input.validated_data["city"]
+            state = serialized_input.validated_data["state"]
+            zip_code = serialized_input.validated_data["zip_code"]
+            card_expiry_date = serialized_input.validated_data["card_expiry_date"]
+            billing_address = serialized_input.validated_data["billing_address"]
+
+            if len(card_expiry_date.split("/")) != 2:
+                return Response(
+                    convert_to_error_message("Invalid card expiry date"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            exp_month = card_expiry_date.split("/")[0]
+            exp_year = card_expiry_date.split("/")[1]
+
+            upload_stripe_payment_method = StripeHelper().create_payment_method(
+                card_number=card_number,
+                cvc=cvc,
+                city=city,
+                state=state,
+                line1=billing_address,
+                zip_code=zip_code,
+                exp_month=exp_month,
+                exp_year=exp_year,
+            )
+            if not upload_stripe_payment_method["status"]:
+                return Response(
+                    convert_to_error_message(upload_stripe_payment_method),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            upload_stripe_payment_method_id = upload_stripe_payment_method["data"]["id"]
+
+            check_customer_exists = StripeHelper().retrieve_customer(user.id)
+
+            if check_customer_exists["status"]:
+                print("Customer exists")
+            else:
+                first_name = decrypt(user.first_name)
+                last_name = decrypt(user.last_name)
+
+                create_customer = StripeHelper().create_customer(
+                    customer_id=user.id,
+                    name=f"{first_name} {last_name}",
+                    email=user.email,
+                    payment_method=upload_stripe_payment_method_id,
+                )
+                print(create_customer)
+                if not create_customer["status"]:
+                    return Response(
+                        convert_to_error_message(create_customer),
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                print(create_customer)
+                # customer_id = create_customer["data"]["id"]
+
+            setup_intent = StripeHelper().setup_intent(
+                customer_id=user.id,
+                pm_id=upload_stripe_payment_method_id,
+            )
+
+            if not setup_intent["status"]:
+                return Response(
+                    convert_to_error_message(setup_intent),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            setup_intent_id = setup_intent["data"]["id"]
+
+            confirm_setup_intent = StripeHelper().confirm_setup_intent(
+                setup_intent_id, pm_id=upload_stripe_payment_method_id
+            )
+
+            if not confirm_setup_intent["status"]:
+                return Response(
+                    convert_to_error_message(confirm_setup_intent),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            print("got here")
+            print(upload_stripe_payment_method_id)
+
+            attach_payment_method = StripeHelper().attach_payment_method(
+                pm_id=upload_stripe_payment_method_id,
+                customer_id=user.id,
+            )
+            print(attach_payment_method)
+            if not attach_payment_method["status"]:
+                return Response(
+                    convert_to_error_message(attach_payment_method),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            print(card_number[:4])
+
+            create_new_card_record = UserCard.objects.create(
+                user=user,
+                last4_digit=card_number[:4],
+                exp_month=exp_month,
+                exp_year=exp_year,
+                card_type=upload_stripe_payment_method["data"]["card"]["brand"],
+                setup_id=setup_intent_id,
+                payment_method_id=upload_stripe_payment_method_id,
+            )
+
+            output_data = self.get_serializer(create_new_card_record)
+            return Response(
+                convert_to_success_message_with_data(
+                    "User card verified successfully", output_data.data
+                ),
                 status=status.HTTP_200_OK,
             )
         except Exception as e:

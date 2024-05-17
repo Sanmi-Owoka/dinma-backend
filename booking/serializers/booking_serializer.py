@@ -1,9 +1,11 @@
 from rest_framework import serializers
 
+from authentication.models import PractitionerPracticeCriteria
 from authentication.serializers.provider_authentication_serializers import (
     SimpleDecryptedProviderDetails,
 )
 from booking.models import UserBookingDetails
+from utility.helpers.functools import decrypt
 
 
 class BookingSerializer(serializers.ModelSerializer):
@@ -170,3 +172,52 @@ class RejectBookingSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+
+class ListUserBookingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserBookingDetails
+        fields = "__all__"
+
+    def to_representation(self, instance: UserBookingDetails):
+        response = super().to_representation(instance)
+
+        response["patient"] = {
+            "id": instance.patient.id,
+            "first_name": decrypt(instance.patient.first_name),
+            "last_name": decrypt(instance.patient.last_name),
+            "email": instance.patient.email,
+            "address": decrypt(instance.patient.address),
+            "gender": instance.patient.gender,
+        }
+        if instance.patient.photo:
+            response["patient"]["photo"] = instance.patient.photo.url
+        response["patient"]["photo"] = None
+
+        if instance.practitioner:
+            criteria = PractitionerPracticeCriteria.objects.get(
+                user=instance.practitioner
+            )
+            provider = {
+                "id": instance.practitioner.id,
+                "first_name": decrypt(instance.practitioner.first_name),
+                "last_name": decrypt(instance.practitioner.last_name),
+                "email": instance.practitioner.email,
+                "gender": instance.practitioner.gender,
+                "title": criteria.practice_name,
+            }
+            if instance.practitioner.photo:
+                provider["photo"] = instance.practitioner.photo.url
+            else:
+                provider["photo"] = None
+            response["practitioner"] = provider
+        else:
+            response["practitioner"] = None
+
+        return response
+
+
+class RescheduleBookingRequestSerializer(serializers.Serializer):
+    booking_id = serializers.UUIDField(required=True)
+    day_care_is_needed = serializers.DateField(required=False)
+    date_time_care_is_needed = serializers.DateTimeField(required=False)

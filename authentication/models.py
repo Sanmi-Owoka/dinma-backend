@@ -226,3 +226,13 @@ class InsuranceDetails(BaseModel):
     insurance_coverage = models.DecimalField(
         decimal_places=2, max_digits=12, null=True, blank=True
     )
+
+
+class UserCard(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_card")
+    last4_digit = models.CharField(max_length=10, blank=True, null=True)
+    exp_month = models.CharField(max_length=2, blank=True, null=True)
+    exp_year = models.CharField(max_length=4, blank=True, null=True)
+    card_type = models.CharField(max_length=255, blank=True, null=True)
+    setup_id = models.CharField(max_length=255, blank=True, null=True)
+    payment_method_id = models.CharField(max_length=255, blank=True, null=True)
