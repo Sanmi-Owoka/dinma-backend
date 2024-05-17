@@ -266,7 +266,7 @@ class BookingViewSet(GenericViewSet):
             subject = "Inhouse Visit Booking Request"
             from_email = settings.DEFAULT_FROM_EMAIL
             body = render_to_string(
-                "email/care-request.html",
+                "email/request-care.html",
                 {
                     "fullname": fullname,
                     "patient_name": patient_fullname,
