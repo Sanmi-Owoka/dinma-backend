@@ -1,7 +1,7 @@
 import stripe
 from django.conf import settings
 
-stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
+stripe.api_key = settings.STRIPE_TEST_API_KEY
 
 client = stripe.http_client.RequestsClient()
 stripe.default_http_client = client
@@ -72,12 +72,20 @@ def stripe_handle_exception(f):
 
 class StripeHelper:
     def __init__(self):
-        self.live_api_key = settings.STRIPE_LIVE_SECRET_KEY
-        self.test_api_key = settings.STRIPE_TEST_SECRET_KEY
+        self.live_api_key = settings.STRIPE_TEST_API_KEY
+        self.test_api_key = settings.STRIPE_TEST_API_KEY
         # self.helper = stripe.api_key(self.test_api_key)
 
     def create_payment_method(
-        self, card_number: str, exp_month: int, exp_year: int, cvc: str
+        self,
+        card_number: str,
+        exp_month: int,
+        exp_year: int,
+        cvc: str,
+        line1: str,
+        city: str,
+        state: str,
+        zip_code: str,
     ) -> dict:
         try:
             payment_method = stripe.PaymentMethod.create(
@@ -87,6 +95,15 @@ class StripeHelper:
                     "exp_month": exp_month,
                     "exp_year": exp_year,
                     "cvc": f"{cvc}",
+                },
+                billing_details={
+                    "address": {
+                        "line1": line1,
+                        "city": city,
+                        "state": state,
+                        "postal_code": zip_code,
+                        "country": "US",
+                    }
                 },
             )
             return {"status": True, "data": payment_method}
@@ -200,11 +217,43 @@ class StripeHelper:
                 "message": f"{e}",
             }
 
+    def setup_intent_without_customer(self, pm_id):
+        try:
+            intent = stripe.SetupIntent.create(
+                payment_method=pm_id,
+            )
+
+            return {"status": True, "data": intent}
+
+        except stripe.error.RateLimitError as e:
+            return {"status": False, "exception": "RateLimitError", "message": f"{e}"}
+        except stripe.error.InvalidRequestError as e:
+            return {
+                "status": False,
+                "exception": "InvalidRequestError",
+                "message": f"{e}",
+            }
+        except stripe.error.APIConnectionError as e:
+            return {
+                "status": False,
+                "exception": "APIConnectionError",
+                "message": f"{e}",
+            }
+        except stripe.error.StripeError as e:
+            return {"status": False, "exception": "StripeError", "message": f"{e}"}
+        except Exception as e:
+            return {
+                "status": False,
+                "exception": "Out of Scope Exception",
+                "message": f"{e}",
+            }
+
     def setup_intent(self, customer_id: str, pm_id: str):
         try:
             intent = stripe.SetupIntent.create(
-                customer=customer_id,
+                customer=str(customer_id),
                 payment_method=pm_id,
+                automatic_payment_methods={"enabled": True, "allow_redirects": "never"},
             )
 
             return {"status": True, "data": intent}
@@ -260,9 +309,9 @@ class StripeHelper:
                 "message": f"{e}",
             }
 
-    def confirm_setup_intent(self, id: str):
+    def confirm_setup_intent(self, id: str, pm_id: str):
         try:
-            confirm_intent = stripe.SetupIntent.confirm(id)
+            confirm_intent = stripe.SetupIntent.confirm(id, payment_method=pm_id)
 
             return {"status": True, "data": confirm_intent}
         except stripe.error.RateLimitError as e:
@@ -551,9 +600,53 @@ class StripeHelper:
                 "message": f"{e}",
             }
 
-    def create_card(self, customer_id):
+    def list_customer_payment_method(self, customer_id):
         try:
-            pass
+            process = stripe.Customer.list_payment_methods(
+                str(customer_id),
+                limit=3,
+            )
+            return {"status": True, "data": process}
+        except stripe.error.CardError as e:
+            # Since it's a decline, stripe.error.CardError will be caught
+
+            print("Status is: %s" % e.http_status)
+            print("Code is: %s" % e.code)
+            # param is '' in this case
+            print("Param is: %s" % e.param)
+            print("Message is: %s" % e.user_message)
+
+            return {"status": False, "exception": "CardError", "message": f"{e}"}
+        except stripe.error.RateLimitError as e:
+            return {"status": False, "exception": "RateLimitError", "message": f"{e}"}
+        except stripe.error.InvalidRequestError as e:
+            return {
+                "status": False,
+                "exception": "InvalidRequestError",
+                "message": f"{e}",
+            }
+        except stripe.error.APIConnectionError as e:
+            return {
+                "status": False,
+                "exception": "APIConnectionError",
+                "message": f"{e}",
+            }
+        except stripe.error.StripeError as e:
+            return {"status": False, "exception": "StripeError", "message": f"{e}"}
+        except Exception as e:
+            return {
+                "status": False,
+                "exception": "Out of Scope Exception",
+                "message": f"{e}",
+            }
+
+    def attach_payment_method(self, pm_id: str, customer_id: str):
+        try:
+            process = stripe.PaymentMethod.attach(
+                pm_id,
+                customer=customer_id,
+            )
+            return {"status": True, "data": process}
         except stripe.error.CardError as e:
             # Since it's a decline, stripe.error.CardError will be caught
 
