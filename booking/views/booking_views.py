@@ -2,6 +2,7 @@ import datetime
 
 from django.conf import settings
 from django.core.mail import EmailMessage
+from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.utils.timezone import make_aware
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -20,7 +21,11 @@ from authentication.serializers.provider_authentication_serializers import (
     SimpleDecryptedProviderDetails,
 )
 from booking.functools import generate_unique_id, recommend_providers
-from booking.models import GeneralBookingDetails, UserBookingDetails
+from booking.models import (
+    GeneralBookingDetails,
+    UserBookingDetails,
+    UserBookingRequestTimeFrame,
+)
 from booking.serializers.booking_serializer import (  # GetProviderBookingSerializer,
     BookingSerializer,
     ConfirmBookingSerializer,
@@ -375,37 +380,31 @@ class BookingViewSet(GenericViewSet):
         detail=False,
         url_name="accept_booking_request",
         serializer_class=ConfirmBookingSerializer,
+        permission_classes=[AllowAny],
     )
     def accept_booking_request(self, request):
         try:
-            user = request.user
-            logged_in_user = User.objects.get(id=user.id)
-            if logged_in_user.user_type == "patient":
-                return Response(
-                    convert_to_error_message(
-                        "You are not authorized for this function"
-                    ),
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
             serialized_input = self.get_serializer(data=request.data)
             if not serialized_input.is_valid():
                 return Response(
-                    convert_to_error_message(
-                        convert_serializer_errors_from_dict_to_list(
-                            serialized_input.errors
-                        )
-                    ),
+                    convert_to_error_message(serialized_input.errors),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            booking_id = serialized_input.validated_data.get("booking_id")
-            booking_details = UserBookingDetails.objects.filter(id=booking_id)
-            if not booking_details.exists():
+            user_email = serialized_input.validated_data.get("email")
+            user = User.objects.filter(email=user_email)
+            if not user.exists():
                 return Response(
-                    convert_to_error_message(f"No booking found with id {booking_id}"),
+                    convert_to_error_message(f"No user found with email {user_email}"),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            user = user.first()
+
+            booking_id = serialized_input.validated_data.get("booking_id")
+
+            booking_details = UserBookingDetails.objects.filter(id=booking_id)
+            if not booking_details.exists():
+                return HttpResponse("<h1>No booking found with id</h1>")
 
             booking_details = booking_details.first()
             if booking_details.status != "pending":
@@ -416,7 +415,7 @@ class BookingViewSet(GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            if booking_details.practitioner != logged_in_user:
+            if booking_details.practitioner != user:
                 return Response(
                     convert_to_error_message(
                         f"The booking with id {booking_id} does not exists"
@@ -424,9 +423,7 @@ class BookingViewSet(GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            provider_criteria = PractitionerPracticeCriteria.objects.filter(
-                user=logged_in_user
-            )
+            provider_criteria = PractitionerPracticeCriteria.objects.filter(user=user)
             if not provider_criteria.exists():
                 return Response(
                     convert_to_error_message(
@@ -443,16 +440,38 @@ class BookingViewSet(GenericViewSet):
 
             booking_details.status = "accepted"
 
-            provider_criteria.available_days.remove(booking_details.date_time_of_care)
             provider_criteria.save()
+
+            booking_timeframe = (
+                PractitionerAvailableDateTime.objects.filter(
+                    provider_criteria=provider_criteria,
+                    available_date_time__year=booking_details.date_time_of_care.year,
+                    available_date_time__month=booking_details.date_time_of_care.month,
+                    available_date_time__day=booking_details.date_time_of_care.day,
+                    available_date_time__hour=booking_details.date_time_of_care.hour,
+                )
+                .values_list("available_date_time", flat=True)
+                .distinct()
+            )
+
+            # Add days been removed to the booking booking_timeframe
+            create_booking_timeframe = UserBookingRequestTimeFrame.objects.create(
+                booking=booking_details,
+                booking_timeframe=list(booking_timeframe),
+            )
+            create_booking_timeframe.save()
+
+            booking_details.save()
 
             PractitionerAvailableDateTime.objects.filter(
                 provider_criteria=provider_criteria,
-                available_date_time=booking_details.date_time_of_care,
+                available_date_time__year=booking_details.date_time_of_care.year,
+                available_date_time__month=booking_details.date_time_of_care.month,
+                available_date_time__day=booking_details.date_time_of_care.day,
+                available_date_time__hour=booking_details.date_time_of_care.hour,
             ).delete()
 
-            booking_details.save()
-            provider_name = f"{decrypt(logged_in_user.first_name)} {decrypt(logged_in_user.last_name)}"
+            provider_name = f"{decrypt(user.first_name)} {decrypt(user.last_name)}"
 
             # try:
             subject = "Booking Request Confirmed"
@@ -470,13 +489,14 @@ class BookingViewSet(GenericViewSet):
                 body,
                 to=[patient.email],
                 from_email=from_email,
-                bcc=[logged_in_user.email],
+                bcc=[user.email],
             )
             message.content_subtype = "html"
             message.send(fail_silently=True)
 
             return Response(
-                convert_success_message("Booking had been successfully confirmed")
+                convert_success_message("Booking Request successfully"),
+                status=status.HTTP_200_OK,
             )
         except Exception as err:
             return Response(
@@ -488,32 +508,13 @@ class BookingViewSet(GenericViewSet):
         detail=False,
         url_name="reject_booking_request",
         serializer_class=RejectBookingSerializer,
+        permission_classes=[AllowAny],
     )
     def reject_booking_request(self, request):
         try:
-            user = request.user
-            logged_in_user = User.objects.get(id=user.id)
-            if logged_in_user.user_type == "patient":
-                return Response(
-                    convert_to_error_message(
-                        "You are not authorized for this function"
-                    ),
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            serialized_input = self.get_serializer(data=request.data)
-            if not serialized_input.is_valid():
-                return Response(
-                    convert_to_error_message(
-                        convert_serializer_errors_from_dict_to_list(
-                            serialized_input.errors
-                        )
-                    ),
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            booking_id = serialized_input.validated_data.get("booking_id")
-            reason = serialized_input.validated_data.get("reason")
+            user_email = request.GET.get("email")
+            user = User.objects.get(email=user_email)
+            booking_id = request.GET.get("booking_id")
 
             booking_details = UserBookingDetails.objects.filter(id=booking_id)
             if not booking_details.exists():
@@ -531,7 +532,7 @@ class BookingViewSet(GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            if booking_details.practitioner != logged_in_user:
+            if booking_details.practitioner != user:
                 return Response(
                     convert_to_error_message(
                         f"The booking with id {booking_id} does not exists"
@@ -542,6 +543,7 @@ class BookingViewSet(GenericViewSet):
             patient = booking_details.patient
             fullname = f"{patient.first_name} {patient.last_name}"
             date_time_of_care = booking_details.date_time_of_care
+            reason = "Provider Unavailable"
 
             booking_details.status = "rejected"
             booking_details.reason = reason
@@ -565,15 +567,12 @@ class BookingViewSet(GenericViewSet):
                 body,
                 to=[patient.email],
                 from_email=from_email,
-                bcc=[logged_in_user.email],
+                bcc=[user.email],
             )
             message.content_subtype = "html"
             message.send(fail_silently=True)
 
-            return Response(
-                convert_success_message("Booking had been successfully rejected"),
-                status=status.HTTP_200_OK,
-            )
+            return HttpResponse("<h1>Booking request Rejected successfully</h1>")
         except Exception as err:
             return Response(
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
@@ -741,8 +740,37 @@ class BookingViewSet(GenericViewSet):
                 )
 
             booking_details = booking_details.first()
+            provider = booking_details.practitioner
             booking_details.status = "failed"
             booking_details.reason = serialized_input.validated_data["reason"]
+
+            provider_criteria = PractitionerPracticeCriteria.objects.filter(
+                user=provider
+            )
+            if not provider_criteria.exists():
+                return Response(
+                    convert_to_error_message(
+                        "An error with Provider occurred please reach out to support team"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            provider_criteria = provider_criteria.first()
+
+            # Add Timeframe back to provider datetime
+            get_bookings_timeframe = UserBookingRequestTimeFrame.objects.filter(
+                booking=booking_details,
+            )
+            if get_bookings_timeframe.exists():
+                get_bookings_timeframe = (
+                    get_bookings_timeframe.first().booking_timeframe
+                )
+                for timeframe in get_bookings_timeframe:
+                    PractitionerAvailableDateTime.objects.create(
+                        provider_criteria=provider_criteria,
+                        available_date_time=timeframe,
+                    )
+
             booking_details.save()
             return Response(
                 convert_success_message("Booking has been cancelled"),
@@ -945,6 +973,43 @@ class BookingViewSet(GenericViewSet):
                 },
                 status=status.HTTP_200_OK,
             )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="time_frame", description="time_frame", type=str, required=False
+            ),
+        ]
+    )
+    @action(methods=["GET"], detail=False, permission_classes=[AllowAny])
+    def test_hour_implementation(self, request):
+        try:
+            time_frame = request.GET.get("time_frame")
+            time_frame = datetime.datetime.strptime(time_frame, "%Y-%m-%d %H:%M:%S")
+            user = User.objects.get(email="blackcodingboy4@gmail.com")
+            provider_criteria = PractitionerPracticeCriteria.objects.get(user=user)
+
+            booking_timeframe = (
+                PractitionerAvailableDateTime.objects.filter(
+                    provider_criteria=provider_criteria,
+                    available_date_time__year=time_frame.year,
+                    available_date_time__month=time_frame.month,
+                    available_date_time__day=time_frame.day,
+                    available_date_time__hour=time_frame.hour,
+                )
+                .values_list("available_date_time", flat=True)
+                .distinct()
+            )
+
+            return Response(
+                convert_to_success_message_serialized_data(list(booking_timeframe)),
+                status=status.HTTP_200_OK,
+            )
+
         except Exception as err:
             return Response(
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST

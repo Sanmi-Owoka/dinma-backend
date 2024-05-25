@@ -296,10 +296,25 @@ class PractionerViewSet(GenericViewSet):
     def get_available_days(self, request):
         try:
             user = self.get_queryset()
+            if user.user_type != "health_provider":
+                return Response(
+                    convert_to_error_message("Not authorized"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             practice_criteria = PractitionerPracticeCriteria.objects.get(user=user)
+            get_user_available_date_time = (
+                PractitionerAvailableDateTime.objects.filter(
+                    provider_criteria=practice_criteria,
+                )
+                .order_by("-available_date_time")
+                .values_list("available_date_time", flat=True)
+                .distinct()
+            )
+            get_user_available_date_time = list(get_user_available_date_time)
+
             return Response(
                 convert_to_success_message_serialized_data(
-                    practice_criteria.available_days
+                    get_user_available_date_time
                 ),
                 status=status.HTTP_200_OK,
             )

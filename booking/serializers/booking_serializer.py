@@ -114,11 +114,15 @@ class ConfirmBookingSerializer(serializers.ModelSerializer):
     booking_id = serializers.CharField(
         required=True, max_length=50, trim_whitespace=True, write_only=True
     )
+    email = serializers.CharField(
+        required=True, max_length=50, trim_whitespace=True, write_only=True
+    )
 
     class Meta:
         model = UserBookingDetails
         fields = [
             "booking_id",
+            "email",
             "id",
             "date_care_is_needed",
             "age_of_patient",
