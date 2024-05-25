@@ -1,3 +1,4 @@
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
 from authentication.base_model import BaseModel
@@ -32,6 +33,17 @@ class UserBookingDetails(BaseModel):
     )
     date_time_of_care = models.DateTimeField(null=True, blank=True)
     reason = models.CharField(max_length=800, null=True, blank=True)
+
+
+class UserBookingRequestTimeFrame(BaseModel):
+    booking = models.ForeignKey(
+        UserBookingDetails,
+        on_delete=models.CASCADE,
+        related_name="booking_request_timeframe",
+    )
+    booking_timeframe = ArrayField(
+        models.DateTimeField(null=True, blank=True),
+    )
 
 
 class GeneralBookingDetails(models.Model):
