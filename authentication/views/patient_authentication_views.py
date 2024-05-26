@@ -251,10 +251,26 @@ class PatientAuthenticationViewSet(GenericViewSet):
                     convert_to_error_message("Invalid password"),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+            # add has card verified
+            if get_user.user_type == "patient":
+                check_user_has_card = UserCard.objects.filter(user=get_user)
+                if check_user_has_card.exists():
+                    card_verified = True
+                else:
+                    card_verified = False
+            else:
+                card_verified = None
+
             user = decrypt_user_data(get_user, request)
 
             token = RefreshToken.for_user(get_user)
-            response = {"user": user, "token": str(token.access_token)}
+
+            response = {
+                "user": user,
+                "token": str(token.access_token),
+                "card_verified": card_verified,
+            }
 
             return Response(
                 convert_to_success_message_serialized_data(response),
