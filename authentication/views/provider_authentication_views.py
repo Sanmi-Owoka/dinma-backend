@@ -111,9 +111,6 @@ class PractionerViewSet(GenericViewSet):
                 ].capitalize(),
                 languages_spoken=serialized_input.validated_data["languages_spoken"],
                 user_type="health_provider",
-                social_security_number=serialized_input.validated_data[
-                    "social_security_number"
-                ],
             )
 
             try:
