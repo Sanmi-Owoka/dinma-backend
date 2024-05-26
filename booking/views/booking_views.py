@@ -16,6 +16,7 @@ from authentication.models import (
     PractitionerAvailableDateTime,
     PractitionerPracticeCriteria,
     User,
+    UserCard,
 )
 from authentication.serializers.provider_authentication_serializers import (
     SimpleDecryptedProviderDetails,
@@ -75,6 +76,15 @@ class BookingViewSet(GenericViewSet):
                     ),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+            if not UserCard.objects.filter(user=logged_in_user).exists():
+                return Response(
+                    convert_to_error_message(
+                        "You are not authorized to book until a card payment method is verified"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             serialized_input = self.get_serializer(data=request.data)
             if not serialized_input.is_valid():
                 return Response(
@@ -158,6 +168,14 @@ class BookingViewSet(GenericViewSet):
                 return Response(
                     convert_to_error_message(
                         "You are not authorized to book a health provider"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if not UserCard.objects.filter(user=logged_in_user).exists():
+                return Response(
+                    convert_to_error_message(
+                        "You are not authorized to book until a card payment method is verified"
                     ),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
