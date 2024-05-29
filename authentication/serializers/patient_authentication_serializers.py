@@ -240,4 +240,11 @@ class UserCardSerializer(serializers.ModelSerializer):
             "last4_digit",
             "exp_month",
             "exp_year",
+            "setup_id",
+            "payment_method_id",
         ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["cardholder_name"] = instance.cardholder_name
+        return data
