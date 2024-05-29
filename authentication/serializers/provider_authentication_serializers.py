@@ -1,5 +1,6 @@
 import datetime
 
+from django.db import transaction
 from django.utils.timezone import make_aware
 from rest_framework import serializers
 
@@ -8,6 +9,7 @@ from authentication.models import (
     PractitionerPracticeCriteria,
     ProviderQualification,
     User,
+    UserAccountDetails,
 )
 from utility.helpers.functools import decrypt
 
@@ -482,3 +484,31 @@ class EditPractionerSerializer(serializers.ModelSerializer):
         except Exception as e:
             print("Error", e)
             return None
+
+
+class UserAccountDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserAccountDetails
+        fields = "__all__"
+        read_only_fields = [
+            "user",
+        ]
+
+    def to_representation(self, instance):
+        data = self.context["request"].data
+        response = super().to_representation(data)
+        response["user"] = self.context["request"].user.id
+        return response
+
+    def create(self, validated_data):
+        request = self.context["request"]
+        print(request)
+        validated_data["user"] = request.user
+        return UserAccountDetails.objects.get_or_create(**validated_data)
+
+    @transaction.atomic()
+    def update(self, validated_data):
+        user_account_details = UserAccountDetails.objects.filter(
+            user=self.context["request"].user
+        ).update(**validated_data)
+        return user_account_details

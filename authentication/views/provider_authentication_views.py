@@ -15,12 +15,14 @@ from authentication.models import (
     ProviderQualification,
     Referral,
     User,
+    UserAccountDetails,
 )
 from authentication.serializers.provider_authentication_serializers import (
     EditPractionerSerializer,
     OnboardPractionerSerializer,
     PractitionerAvailableDateTimeSerializer,
     SimpleDecryptedProviderDetails,
+    UserAccountDetailsSerializer,
 )
 from authentication.utils import start_schedule_background_tasks
 from booking.models import GeneralBookingDetails, UserBookingDetails
@@ -366,6 +368,39 @@ class PractionerViewSet(GenericViewSet):
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
             )
 
+    @action(methods=["GET"], detail=False)
+    def get_monthly_earnings(self, request):
+        try:
+            months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+            monthly_earnings = []
+            for month in months:
+                total_successful_bookings = UserBookingDetails.objects.filter(
+                    practitioner=self.get_queryset(),
+                    status="succeeded",
+                    created_at__month=month,
+                )
+                price_per_consultation = (
+                    GeneralBookingDetails.objects.first().price_per_consultation
+                )
+                total_earnings = (
+                    total_successful_bookings.count() * price_per_consultation
+                )
+                monthly_earnings.append(total_earnings)
+            return Response(
+                {
+                    "status": "success",
+                    "message": "request successful",
+                    "data": {
+                        "monthly_earnings": monthly_earnings,
+                    },
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
     @action(methods=["PUT"], detail=False, serializer_class=EditPractionerSerializer)
     def update_health_provider_details(self, request):
         try:
@@ -485,6 +520,81 @@ class PractionerViewSet(GenericViewSet):
             response_data = SimpleDecryptedProviderDetails(logged_in_user)
             return Response(
                 convert_to_success_message_serialized_data(response_data.data),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["POST"], detail=False, serializer_class=UserAccountDetailsSerializer
+    )
+    def save_account_details(self, request):
+        try:
+            logged_in_user = self.get_queryset()
+            if logged_in_user.user_type != "health_provider":
+                return Response(
+                    convert_to_error_message(
+                        "You are not allowed to save account details"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            serialized_input = self.get_serializer(data=request.data)
+            if UserAccountDetails.objects.filter(user=logged_in_user).exists():
+                return Response(
+                    convert_to_error_message("User already has account details"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(
+                        convert_serializer_errors_from_dict_to_list(
+                            serialized_input.errors
+                        )
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            serialized_input.save()
+
+            return Response(
+                convert_to_success_message_serialized_data(serialized_input.data),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["PUT"], detail=False, serializer_class=UserAccountDetailsSerializer
+    )
+    def update_account_details(self, request):
+        try:
+            logged_in_user = self.get_queryset()
+            if logged_in_user.user_type != "health_provider":
+                return Response(
+                    convert_to_error_message(
+                        "You are not allowed to save account details"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(
+                        convert_serializer_errors_from_dict_to_list(
+                            serialized_input.errors
+                        )
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            serialized_input.update(serialized_input.validated_data)
+            return Response(
+                convert_to_success_message_serialized_data(serialized_input.data),
                 status=status.HTTP_200_OK,
             )
         except Exception as err:
