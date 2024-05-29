@@ -490,8 +490,9 @@ class UserAccountDetailsSerializer(serializers.ModelSerializer):
         ]
 
     def to_representation(self, instance):
-        data = self.context["request"].data
-        response = super().to_representation(data)
+        if isinstance(instance, tuple):
+            instance = instance[0]
+        response = super().to_representation(instance)
         response["user"] = self.context["request"].user.id
         return response
 

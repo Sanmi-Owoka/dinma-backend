@@ -31,6 +31,7 @@ from utility.helpers.functools import (
     convert_serializer_errors_from_dict_to_list,
     convert_to_error_message,
     convert_to_success_message_serialized_data,
+    convert_to_success_message_with_data,
     decrypt_user_data,
     encrypt,
     paginate,
@@ -609,6 +610,43 @@ class PractionerViewSet(GenericViewSet):
                 convert_to_success_message_serialized_data(serialized_input.data),
                 status=status.HTTP_200_OK,
             )
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["GET"], detail=False, serializer_class=UserAccountDetailsSerializer
+    )
+    def get_account_details(self, request):
+        try:
+            logged_in_user = self.get_queryset()
+            if logged_in_user.user_type != "health_provider":
+                return Response(
+                    convert_to_error_message(
+                        "You are not allowed to save account details"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            get_account_details = UserAccountDetails.objects.filter(user=logged_in_user)
+            if not get_account_details.exists():
+                return Response(
+                    convert_to_success_message_with_data(
+                        "User has no account details", {}
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            get_account_details = get_account_details.first()
+            output_data = self.get_serializer(get_account_details)
+            return Response(
+                convert_to_success_message_with_data(
+                    "User account details retrieved successfully", output_data.data
+                ),
+                status=status.HTTP_200_OK,
+            )
+
         except Exception as err:
             return Response(
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
