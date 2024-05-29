@@ -230,6 +230,7 @@ class InsuranceDetails(BaseModel):
 
 class UserCard(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_card")
+    cardholder_name = models.CharField(max_length=255, blank=True, null=True)
     last4_digit = models.CharField(max_length=10, blank=True, null=True)
     exp_month = models.CharField(max_length=2, blank=True, null=True)
     exp_year = models.CharField(max_length=4, blank=True, null=True)

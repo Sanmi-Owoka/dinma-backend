@@ -955,6 +955,8 @@ class PatientAuthenticationViewSet(GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
+            cardholder_name = serialized_input.validated_data["cardholder_name"]
+
             card_number = serialized_input.validated_data["card_number"]
             cvc = serialized_input.validated_data["cvc"]
             city = serialized_input.validated_data["city"]
@@ -1035,23 +1037,20 @@ class PatientAuthenticationViewSet(GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            print("got here")
-            print(upload_stripe_payment_method_id)
-
             attach_payment_method = StripeHelper().attach_payment_method(
                 pm_id=upload_stripe_payment_method_id,
                 customer_id=user.id,
             )
-            print(attach_payment_method)
+
             if not attach_payment_method["status"]:
                 return Response(
                     convert_to_error_message(attach_payment_method),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            print(card_number[:4])
 
             create_new_card_record = UserCard.objects.create(
                 user=user,
+                cardholder_name=cardholder_name,
                 last4_digit=card_number[:4],
                 exp_month=exp_month,
                 exp_year=exp_year,
@@ -1070,3 +1069,27 @@ class PatientAuthenticationViewSet(GenericViewSet):
         except Exception as e:
             print("error", e)
             return Response({"message": [f"{e}"]}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=["GET"], detail=False, serializer_class=UserCardSerializer)
+    def get_user_card(self, request):
+        try:
+            user = User.objects.get(id=request.user.id)
+            user_card = UserCard.objects.filter(user=user)
+            if not user_card.exists():
+                return Response(
+                    convert_to_error_message("User card not found"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user_card = user_card.first()
+            output_data = self.get_serializer(user_card)
+            return Response(
+                convert_to_success_message_with_data(
+                    "User card retrieved successfully", output_data.data
+                ),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            print("error", e)
+            return Response(
+                convert_to_error_message(f"{e}"), status=status.HTTP_400_BAD_REQUEST
+            )

@@ -123,6 +123,7 @@ class PhoneNumberVerificationAdmin(admin.ModelAdmin):
 class UserCardAdmin(admin.ModelAdmin):
     list_display = [
         "user",
+        "cardholder_name",
         "last4_digit",
         "exp_month",
         "exp_year",
