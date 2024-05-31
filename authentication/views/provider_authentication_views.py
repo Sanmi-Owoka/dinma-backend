@@ -324,7 +324,7 @@ class PractionerViewSet(GenericViewSet):
     @extend_schema(
         parameters=[
             OpenApiParameter(
-                name="email", description="booking status", type=str, required=False
+                name="email", description="provider email", type=str, required=False
             ),
         ]
     )
