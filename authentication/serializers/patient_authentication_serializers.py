@@ -17,7 +17,7 @@ class CreatePatientProfileSerializer(serializers.ModelSerializer):
     )
     address = serializers.CharField(required=True, max_length=150, trim_whitespace=True)
     date_of_birth = serializers.CharField(
-        required=True, max_length=150, trim_whitespace=True
+        max_length=150, trim_whitespace=True, default="dd-mm-YYYY"
     )
     gender = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
     city = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
@@ -240,4 +240,11 @@ class UserCardSerializer(serializers.ModelSerializer):
             "last4_digit",
             "exp_month",
             "exp_year",
+            "setup_id",
+            "payment_method_id",
         ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["cardholder_name"] = instance.cardholder_name
+        return data

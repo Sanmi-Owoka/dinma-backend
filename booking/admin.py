@@ -1,6 +1,10 @@
 from django.contrib import admin
 
-from .models import GeneralBookingDetails, UserBookingDetails
+from .models import (
+    GeneralBookingDetails,
+    UserBookingDetails,
+    UserBookingRequestTimeFrame,
+)
 
 
 @admin.register(UserBookingDetails)
@@ -26,3 +30,15 @@ class GeneralBookingDetailsAdmin(admin.ModelAdmin):
         "id",
         "price_per_consultation",
     ]
+
+
+@admin.register(UserBookingRequestTimeFrame)
+class UserBookingRequestTimeFrameAdmin(admin.ModelAdmin):
+    list_display = [
+        "id",
+        "booking",
+        "booking_timeframe",
+        "created_at",
+        "updated_at",
+    ]
+    search_fields = ["booking__patient__email", "booking__practitioner__email"]
