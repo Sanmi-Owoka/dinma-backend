@@ -98,8 +98,20 @@ class PatientAuthenticationViewSet(GenericViewSet):
                     status=status.HTTP_404_NOT_FOUND,
                 )
             get_user = get_user["response"]
+            # add has card verified
+            if get_user.user_type == "patient":
+                check_user_has_card = UserCard.objects.filter(user=get_user)
+                if check_user_has_card.exists():
+                    card_verified = True
+                else:
+                    card_verified = False
+            else:
+                card_verified = None
 
-            output_response = decrypt_user_data(get_user, request)
+            output_response = {
+                "user": decrypt_user_data(get_user, request),
+                "card_verified": card_verified,
+            }
 
             return Response(
                 convert_to_success_message_serialized_data(output_response),
