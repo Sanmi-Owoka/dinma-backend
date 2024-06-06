@@ -938,7 +938,7 @@ class BookingViewSet(GenericViewSet):
             ]
             booking_details.date_time_of_care = date_time_care_is_needed
             booking_details.date_care_is_needed = date_time_care_is_needed.date()
-            booking_details.status = "requested"
+            booking_details.status = "pending"
 
             # try:
             subject = "Reschedule booking request"
