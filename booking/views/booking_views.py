@@ -1,5 +1,5 @@
 import datetime
-
+from django.db import  transaction
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.http import HttpResponse
@@ -884,7 +884,7 @@ class BookingViewSet(GenericViewSet):
             return Response(
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
             )
-
+    @transaction.atomic()
     @action(
         methods=["POST"],
         detail=False,
@@ -931,14 +931,74 @@ class BookingViewSet(GenericViewSet):
                     convert_to_error_message(f"No provider found with id {booking_id}"),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+            provider_criteria = PractitionerPracticeCriteria.objects.filter(user=provider)
+            if not provider_criteria.exists():
+                return Response(
+                    convert_to_error_message(
+                        "An error occurred, Please contact support"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            provider_criteria = provider_criteria.first()
+
             fullname = f"{decrypt(provider.first_name)} {decrypt(provider.last_name)}"
+
+            # Add Timeframe back to provider datetime
+            get_bookings_timeframe = UserBookingRequestTimeFrame.objects.filter(
+                booking=booking_details,
+            )
+            if get_bookings_timeframe.exists():
+                get_bookings_timeframe = (
+                    get_bookings_timeframe.first().booking_timeframe
+                )
+                for timeframe in get_bookings_timeframe:
+                    PractitionerAvailableDateTime.objects.create(
+                        provider_criteria=provider_criteria,
+                        available_date_time=timeframe,
+                    )
+
 
             date_time_care_is_needed = serialized_input.validated_data[
                 "date_time_care_is_needed"
             ]
             booking_details.date_time_of_care = date_time_care_is_needed
             booking_details.date_care_is_needed = date_time_care_is_needed.date()
-            booking_details.status = "requested"
+
+
+            booking_timeframe = (
+                PractitionerAvailableDateTime.objects.filter(
+                    provider_criteria=provider_criteria,
+                    available_date_time__year=date_time_care_is_needed.year,
+                    available_date_time__month=date_time_care_is_needed.month,
+                    available_date_time__day=date_time_care_is_needed.day,
+                    available_date_time__hour=date_time_care_is_needed.hour,
+                )
+                .values_list("available_date_time", flat=True)
+                .distinct()
+            )
+
+            # Add days been removed to the booking booking_timeframe
+            get_bookings_timeframe = UserBookingRequestTimeFrame.objects.filter(
+                booking=booking_details,
+            ).first()
+            get_bookings_timeframe.booking_timeframe = list(booking_timeframe)
+            get_bookings_timeframe.save()
+
+
+            booking_details.save()
+
+            PractitionerAvailableDateTime.objects.filter(
+                provider_criteria=provider_criteria,
+                available_date_time__year=date_time_care_is_needed.year,
+                available_date_time__month=date_time_care_is_needed.month,
+                available_date_time__day=date_time_care_is_needed.day,
+                available_date_time__hour=date_time_care_is_needed.hour,
+            ).delete()
+
+
+            booking_details.status = "pending"
 
             # try:
             subject = "Reschedule booking request"
