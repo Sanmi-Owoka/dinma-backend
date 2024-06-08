@@ -1,7 +1,8 @@
 import datetime
-from django.db import  transaction
+
 from django.conf import settings
 from django.core.mail import EmailMessage
+from django.db import transaction
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.utils.timezone import make_aware
@@ -884,6 +885,7 @@ class BookingViewSet(GenericViewSet):
             return Response(
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
             )
+
     @transaction.atomic()
     @action(
         methods=["POST"],
@@ -932,7 +934,9 @@ class BookingViewSet(GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            provider_criteria = PractitionerPracticeCriteria.objects.filter(user=provider)
+            provider_criteria = PractitionerPracticeCriteria.objects.filter(
+                user=provider
+            )
             if not provider_criteria.exists():
                 return Response(
                     convert_to_error_message(
@@ -959,13 +963,11 @@ class BookingViewSet(GenericViewSet):
                         available_date_time=timeframe,
                     )
 
-
             date_time_care_is_needed = serialized_input.validated_data[
                 "date_time_care_is_needed"
             ]
             booking_details.date_time_of_care = date_time_care_is_needed
             booking_details.date_care_is_needed = date_time_care_is_needed.date()
-
 
             booking_timeframe = (
                 PractitionerAvailableDateTime.objects.filter(
@@ -986,7 +988,6 @@ class BookingViewSet(GenericViewSet):
             get_bookings_timeframe.booking_timeframe = list(booking_timeframe)
             get_bookings_timeframe.save()
 
-
             booking_details.save()
 
             PractitionerAvailableDateTime.objects.filter(
@@ -996,7 +997,6 @@ class BookingViewSet(GenericViewSet):
                 available_date_time__day=date_time_care_is_needed.day,
                 available_date_time__hour=date_time_care_is_needed.hour,
             ).delete()
-
 
             booking_details.status = "pending"
 
