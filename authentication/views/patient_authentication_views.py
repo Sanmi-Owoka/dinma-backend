@@ -560,6 +560,11 @@ class PatientAuthenticationViewSet(GenericViewSet):
             if request.data.get("photo"):
                 logged_in_user.photo = base64_to_data(request.data.get("photo"))
 
+            if request.data.get("preferred_communication"):
+                logged_in_user.preferred_communication = request.data.get(
+                    "preferred_communication"
+                )
+
             # save partial update
             logged_in_user.save()
             response = decrypt_user_data(logged_in_user, request)
