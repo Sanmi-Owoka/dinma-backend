@@ -1203,16 +1203,19 @@ class PatientAuthenticationViewSet(GenericViewSet):
             update_user_card = UserCard.objects.filter(user=user)
             update_user_card = update_user_card.first()
 
-            update_user_card.cardholder_name=cardholder_name
-            update_user_card.last4_digit=card_number[:4]
-            update_user_card.exp_month=exp_month
-            update_user_card.exp_year=exp_year
-            update_user_card.card_type=upload_stripe_payment_method["data"]["card"]["brand"]
-            update_user_card.setup_id=setup_intent_id
-            update_user_card.payment_method_id=upload_stripe_payment_method_id
+            update_user_card.cardholder_name = cardholder_name
+            update_user_card.last4_digit = card_number[:4]
+            update_user_card.exp_month = exp_month
+            update_user_card.exp_year = exp_year
+            update_user_card.card_type = upload_stripe_payment_method["data"]["card"][
+                "brand"
+            ]
+            update_user_card.setup_id = setup_intent_id
+            update_user_card.payment_method_id = upload_stripe_payment_method_id
 
             update_user_card.save()
 
+            # old implementation
             # update_user_card = UserCard.objects.filter(user=user).update(
             #     cardholder_name=cardholder_name,
             #     last4_digit=card_number[:4],
