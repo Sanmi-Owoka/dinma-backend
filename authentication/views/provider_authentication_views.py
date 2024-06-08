@@ -156,6 +156,7 @@ class PractionerViewSet(GenericViewSet):
                 user=new_user,
                 practioner_type=serialized_input.validated_data["practioner_type"],
                 credential_title=serialized_input.validated_data["credential_title"],
+                speciality=serialized_input.validated_data["speciality"],
                 NPI=serialized_input.validated_data["NPI"],
                 CAQH=serialized_input.validated_data["CAQH"],
                 licensed_states=serialized_input.validated_data["licensed_states"],
@@ -333,7 +334,10 @@ class PractionerViewSet(GenericViewSet):
     )
     def get_health_provider_details(self, request):
         try:
-            email = request.query_params.get("email", None)
+            if request.query_params.get("email"):
+                email = request.query_params.get("email", None)
+            else:
+                email = request.user.email
 
             provider = User.objects.filter(email=email)
             if not provider.exists():
@@ -466,10 +470,16 @@ class PractionerViewSet(GenericViewSet):
                 )
             if request.data.get("state"):
                 logged_in_user.state = request.data.get("state").capitalize().strip()
-            if request.data.get("language_spoken"):
-                logged_in_user.language_spoken = request.data.get(
-                    "language_spoken"
-                ).strip()
+
+            if request.data.get("languages_spoken"):
+                if (
+                    request.data.get("languages_spoken") != []
+                    and len(request.data.get("languages_spoken")) != 0
+                ):
+                    logged_in_user.languages_spoken = request.data.get(
+                        "languages_spoken"
+                    )
+
             if request.data.get("preferred_language"):
                 logged_in_user.preferred_language = request.data.get(
                     "preferred_language"
@@ -510,10 +520,17 @@ class PractionerViewSet(GenericViewSet):
                     "credential_title"
                 )
 
-            if request.data.get("licensed_states") != []:
-                provider_qualification.licensed_states = request.data.get(
-                    "licensed_states"
-                )
+            if request.data.get("speciality"):
+                provider_qualification.speciality = request.data.get("speciality")
+
+            if request.data.get("licensed_states"):
+                if (
+                    request.data.get("licensed_states") != []
+                    and len(request.data.get("licensed_states")) != 0
+                ):
+                    provider_qualification.licensed_states = request.data.get(
+                        "licensed_states"
+                    )
 
             if request.data.get("practice_name"):
                 provider_criteria.practice_name = request.data.get("practice_name")
@@ -521,10 +538,14 @@ class PractionerViewSet(GenericViewSet):
             if request.data.get("max_distance"):
                 provider_criteria.max_distance = request.data.get("max_distance")
 
-            if request.data.get("preferred_zip_codes") != []:
-                provider_criteria.preferred_zip_codes = request.data.get(
-                    "preferred_zip_codes"
-                )
+            if request.data.get("preferred_zip_codes"):
+                if (
+                    request.data.get("preferred_zip_codes") != []
+                    and len(request.data.get("preferred_zip_codes")) != 0
+                ):
+                    provider_criteria.preferred_zip_codes = request.data.get(
+                        "preferred_zip_codes"
+                    )
 
             logged_in_user.save()
             provider_qualification.save()

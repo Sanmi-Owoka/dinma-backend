@@ -142,6 +142,7 @@ class ProviderQualification(BaseModel):
     )
     practioner_type = models.CharField(max_length=255, null=True, blank=True)
     credential_title = models.CharField(max_length=255, null=True, blank=True)
+    speciality = models.CharField(max_length=255, null=True, blank=True)
     NPI = models.CharField(max_length=255, null=True, blank=True)
     CAQH = models.CharField(max_length=255, null=True, blank=True)
     licensed_states = ArrayField(

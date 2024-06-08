@@ -49,6 +49,7 @@ THIRD_PARTY_APPS = [
     "drf_api_logger",
     "drf_spectacular",
     "rest_framework_simplejwt",
+    "storages",
 ]
 
 LOCAL_APPS = ["authentication", "booking"]
@@ -231,3 +232,13 @@ ZIP_CODE_API_TEST_API_KEY = os.getenv("ZIP_CODE_API_TEST_API_KEY")
 PVERIFY_API_BASE_URL = os.getenv("PVERIFY_BASE_URL")
 PVERIFY_API_CLIENT_SECRET = os.getenv("PVERIFY_CLIENT_SECRET")
 PVERIFY_API_CLIENT_ID = os.getenv("PVERIFY_CLIENT_ID")
+
+# S3 BUCKET SETUP
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None
+AWS_LOCATION = "images"
+AWS_S3_REGION_NAME = "us-east-1"
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"

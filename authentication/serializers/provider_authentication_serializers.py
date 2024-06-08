@@ -52,6 +52,10 @@ class OnboardPractionerSerializer(serializers.ModelSerializer):
         allow_blank=True, max_length=50, trim_whitespace=True
     )
 
+    speciality = serializers.CharField(
+        allow_blank=True, max_length=255, trim_whitespace=True
+    )
+
     NPI = serializers.CharField(required=True, max_length=200, trim_whitespace=True)
     CAQH = serializers.CharField(required=True, max_length=200, trim_whitespace=True)
     licensed_states = serializers.ListField(
@@ -125,6 +129,7 @@ class OnboardPractionerSerializer(serializers.ModelSerializer):
             # practitioner credentials
             "practioner_type",
             "credential_title",
+            "speciality",
             "NPI",
             "CAQH",
             "licensed_states",
@@ -164,12 +169,19 @@ class PractitionerPracticeCriteriaSerializer(serializers.ModelSerializer):
         ]
 
 
+class ProviderQualificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProviderQualification
+        fields = "__all__"
+
+
 class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
     first_name = serializers.SerializerMethodField()
     last_name = serializers.SerializerMethodField()
     photo = serializers.SerializerMethodField()
     licensed_states = serializers.SerializerMethodField()
     practice_criteria = serializers.SerializerMethodField()
+    provider_qualification = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -185,6 +197,7 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
             "user_type",
             "licensed_states",
             "practice_criteria",
+            "provider_qualification",
         ]
 
         read_only_fields = [
@@ -197,6 +210,7 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
             "user_type",
             "licensed_states",
             "practice_criteria",
+            "provider_qualification",
         ]
 
     def to_representation(self, instance: User):
@@ -274,6 +288,16 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
                 user=instance
             )
             return PractitionerPracticeCriteriaSerializer(get_practice_criteria).data
+        except Exception as e:
+            print("Error", e)
+            return None
+
+    def get_provider_qualification(self, instance):
+        try:
+            get_provider_qualification = ProviderQualification.objects.get(
+                user=instance
+            )
+            return ProviderQualificationSerializer(get_provider_qualification).data
         except Exception as e:
             print("Error", e)
             return None
@@ -358,6 +382,7 @@ class EditPractionerSerializer(serializers.ModelSerializer):
     #   Practitioner Credentials
     practioner_type = serializers.CharField(required=False, allow_blank=True)
     credential_title = serializers.CharField(required=False, allow_blank=True)
+    speciality = serializers.CharField(required=False, allow_blank=True)
 
     licensed_states = serializers.ListField(
         allow_empty=True,
@@ -394,6 +419,7 @@ class EditPractionerSerializer(serializers.ModelSerializer):
             # practitioner credentials
             "practioner_type",
             "credential_title",
+            "speciality",
             "licensed_states",
             # practitioner criteria
             "practice_name",
