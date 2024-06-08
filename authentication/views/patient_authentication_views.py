@@ -1082,6 +1082,161 @@ class PatientAuthenticationViewSet(GenericViewSet):
             print("error", e)
             return Response({"message": [f"{e}"]}, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(methods=["PUT"], detail=False, serializer_class=UserCardSerializer)
+    def update_user_card(self, request):
+        try:
+            user = request.user
+            user = User.objects.get(id=request.user.id)
+            # add user_id to to the request
+            request.data["user_id"] = user.id
+
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(
+                        convert_serializer_errors_from_dict_to_list(
+                            serialized_input.errors
+                        )
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            check_card_exists = UserCard.objects.filter(user=user).exists()
+            if not check_card_exists:
+                return Response(
+                    convert_to_error_message("User does not have a card recorded"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            cardholder_name = serialized_input.validated_data["cardholder_name"]
+            card_number = serialized_input.validated_data["card_number"]
+            cvc = serialized_input.validated_data["cvc"]
+            city = serialized_input.validated_data["city"]
+            state = serialized_input.validated_data["state"]
+            zip_code = serialized_input.validated_data["zip_code"]
+            card_expiry_date = serialized_input.validated_data["card_expiry_date"]
+            billing_address = serialized_input.validated_data["billing_address"]
+
+            if len(card_expiry_date.split("/")) != 2:
+                return Response(
+                    convert_to_error_message("Invalid card expiry date"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            exp_month = card_expiry_date.split("/")[0]
+            exp_year = card_expiry_date.split("/")[1]
+
+            upload_stripe_payment_method = StripeHelper().create_payment_method(
+                card_number=card_number,
+                cvc=cvc,
+                city=city,
+                state=state,
+                line1=billing_address,
+                zip_code=zip_code,
+                exp_month=exp_month,
+                exp_year=exp_year,
+            )
+            if not upload_stripe_payment_method["status"]:
+                return Response(
+                    convert_to_error_message(upload_stripe_payment_method),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            upload_stripe_payment_method_id = upload_stripe_payment_method["data"]["id"]
+
+            check_customer_exists = StripeHelper().retrieve_customer(user.id)
+
+            if check_customer_exists["status"]:
+                print("Customer exists")
+            else:
+                first_name = decrypt(user.first_name)
+                last_name = decrypt(user.last_name)
+
+                create_customer = StripeHelper().create_customer(
+                    customer_id=user.id,
+                    name=f"{first_name} {last_name}",
+                    email=user.email,
+                    payment_method=upload_stripe_payment_method_id,
+                )
+                print(create_customer)
+                if not create_customer["status"]:
+                    return Response(
+                        convert_to_error_message(create_customer),
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                print(create_customer)
+                # customer_id = create_customer["data"]["id"]
+
+            setup_intent = StripeHelper().setup_intent(
+                customer_id=user.id,
+                pm_id=upload_stripe_payment_method_id,
+            )
+
+            if not setup_intent["status"]:
+                return Response(
+                    convert_to_error_message(setup_intent),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            setup_intent_id = setup_intent["data"]["id"]
+
+            confirm_setup_intent = StripeHelper().confirm_setup_intent(
+                setup_intent_id, pm_id=upload_stripe_payment_method_id
+            )
+
+            if not confirm_setup_intent["status"]:
+                return Response(
+                    convert_to_error_message(confirm_setup_intent),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            attach_payment_method = StripeHelper().attach_payment_method(
+                pm_id=upload_stripe_payment_method_id,
+                customer_id=user.id,
+            )
+
+            if not attach_payment_method["status"]:
+                return Response(
+                    convert_to_error_message(attach_payment_method),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            print("got here")
+            update_user_card = UserCard.objects.filter(user=user)
+            update_user_card = update_user_card.first()
+
+            update_user_card.cardholder_name = cardholder_name
+            update_user_card.last4_digit = card_number[:4]
+            update_user_card.exp_month = exp_month
+            update_user_card.exp_year = exp_year
+            update_user_card.card_type = upload_stripe_payment_method["data"]["card"][
+                "brand"
+            ]
+            update_user_card.setup_id = setup_intent_id
+            update_user_card.payment_method_id = upload_stripe_payment_method_id
+
+            update_user_card.save()
+
+            # old implementation
+            # update_user_card = UserCard.objects.filter(user=user).update(
+            #     cardholder_name=cardholder_name,
+            #     last4_digit=card_number[:4],
+            #     exp_month=exp_month,
+            #     exp_year=exp_year,
+            #     card_type=upload_stripe_payment_method["data"]["card"]["brand"],
+            #     setup_id=setup_intent_id,
+            #     payment_method_id=upload_stripe_payment_method_id,
+            # )
+
+            output_data = self.get_serializer(update_user_card)
+            return Response(
+                convert_to_success_message_with_data(
+                    "User card verified successfully", output_data.data
+                ),
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            print("error", e)
+            return Response({"message": [f"{e}"]}, status=status.HTTP_400_BAD_REQUEST)
+
     @action(methods=["GET"], detail=False, serializer_class=UserCardSerializer)
     def get_user_card(self, request):
         try:
