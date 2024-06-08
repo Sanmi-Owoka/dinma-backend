@@ -1087,7 +1087,7 @@ class PatientAuthenticationViewSet(GenericViewSet):
         try:
             user = request.user
             user = User.objects.get(id=request.user.id)
-
+            # add user_id to to the request
             request.data["user_id"] = user.id
 
             serialized_input = self.get_serializer(data=request.data)
