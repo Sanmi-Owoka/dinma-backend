@@ -562,26 +562,14 @@ class PractionerViewSet(GenericViewSet):
             )
 
     @action(
-        methods=["POST"], detail=False, serializer_class=UserAccountDetailsSerializer
+        methods=["POST"],
+        detail=False,
+        serializer_class=UserAccountDetailsSerializer,
+        permission_classes=[AllowAny],
     )
     def save_account_details(self, request):
         try:
-            logged_in_user = self.get_queryset()
-            if logged_in_user.user_type != "health_provider":
-                return Response(
-                    convert_to_error_message(
-                        "You are not allowed to save account details"
-                    ),
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
             serialized_input = self.get_serializer(data=request.data)
-            if UserAccountDetails.objects.filter(user=logged_in_user).exists():
-                return Response(
-                    convert_to_error_message("User already has account details"),
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
             if not serialized_input.is_valid():
                 return Response(
                     convert_to_error_message(
@@ -591,6 +579,24 @@ class PractionerViewSet(GenericViewSet):
                     ),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+            user_id = serialized_input.validated_data["user_id"]
+
+            user = User.objects.filter(id=user_id)
+            if not user.exists():
+                return Response(
+                    convert_to_error_message("User does not exist"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            user = user.first()
+
+            if UserAccountDetails.objects.filter(user=user).exists():
+                return Response(
+                    convert_to_error_message("User already has account details"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
             serialized_input.save()
 
             return Response(
@@ -615,6 +621,8 @@ class PractionerViewSet(GenericViewSet):
                     ),
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+            request.data["user_id"] = str(logged_in_user.id)
 
             serialized_input = self.get_serializer(data=request.data)
             if not serialized_input.is_valid():
@@ -656,7 +664,7 @@ class PractionerViewSet(GenericViewSet):
                     convert_to_success_message_with_data(
                         "User has no account details", {}
                     ),
-                    status=status.HTTP_400_BAD_REQUEST,
+                    status=status.HTTP_200_OK,
                 )
 
             get_account_details = get_account_details.first()
