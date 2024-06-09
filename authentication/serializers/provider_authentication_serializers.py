@@ -1,4 +1,5 @@
 import datetime
+import uuid
 
 from django.db import transaction
 from django.utils.timezone import make_aware
@@ -182,6 +183,8 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
     licensed_states = serializers.SerializerMethodField()
     practice_criteria = serializers.SerializerMethodField()
     provider_qualification = serializers.SerializerMethodField()
+    address = serializers.SerializerMethodField()
+    city = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -192,6 +195,10 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
             "last_name",
             "email",
             "gender",
+            "date_of_birth",
+            "address",
+            "city",
+            "state",
             "preferred_communication",
             "languages_spoken",
             "user_type",
@@ -207,6 +214,12 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
             "last_name",
             "email",
             "gender",
+            "date_of_birth",
+            "address",
+            "city",
+            "state",
+            "preferred_communication",
+            "languages_spoken",
             "user_type",
             "licensed_states",
             "practice_criteria",
@@ -298,6 +311,20 @@ class SimpleDecryptedProviderDetails(serializers.ModelSerializer):
                 user=instance
             )
             return ProviderQualificationSerializer(get_provider_qualification).data
+        except Exception as e:
+            print("Error", e)
+            return None
+
+    def get_address(self, instance):
+        try:
+            return decrypt(instance.address)
+        except Exception as e:
+            print("Error", e)
+            return None
+
+    def get_city(self, instance):
+        try:
+            return decrypt(instance.city)
         except Exception as e:
             print("Error", e)
             return None
@@ -508,6 +535,8 @@ class EditPractionerSerializer(serializers.ModelSerializer):
 
 
 class UserAccountDetailsSerializer(serializers.ModelSerializer):
+    user_id = serializers.CharField(default=uuid.uuid4(), write_only=True)
+
     class Meta:
         model = UserAccountDetails
         fields = "__all__"
@@ -519,18 +548,25 @@ class UserAccountDetailsSerializer(serializers.ModelSerializer):
         if isinstance(instance, tuple):
             instance = instance[0]
         response = super().to_representation(instance)
-        response["user"] = self.context["request"].user.id
+        if self.context["request"].user.id:
+            response["user"] = self.context["request"].user.id
+
         return response
 
     def create(self, validated_data):
-        request = self.context["request"]
-        print(request)
-        validated_data["user"] = request.user
+        user = User.objects.get(id=validated_data["user_id"])
+        validated_data["user"] = user
         return UserAccountDetails.objects.get_or_create(**validated_data)
 
     @transaction.atomic()
     def update(self, validated_data):
-        user_account_details = UserAccountDetails.objects.filter(
+        if UserAccountDetails.objects.filter(
             user=self.context["request"].user
-        ).update(**validated_data)
+        ).exists():
+            user_account_details = UserAccountDetails.objects.filter(
+                user=self.context["request"].user
+            ).update(**validated_data)
+        else:
+            validated_data["user"] = self.context["request"].user
+            user_account_details = UserAccountDetails.objects.create(**validated_data)
         return user_account_details
