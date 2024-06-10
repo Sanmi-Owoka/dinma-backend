@@ -549,10 +549,16 @@ class PatientAuthenticationViewSet(GenericViewSet):
                 )
             if request.data.get("state"):
                 logged_in_user.state = request.data.get("state").capitalize().strip()
-            if request.data.get("language_spoken"):
-                logged_in_user.language_spoken = request.data.get(
-                    "language_spoken"
-                ).strip()
+
+            if request.data.get("languages_spoken"):
+                if (
+                    request.data.get("languages_spoken") != []
+                    and len(request.data.get("languages_spoken")) != 0
+                ):
+                    logged_in_user.languages_spoken = request.data.get(
+                        "languages_spoken"
+                    )
+
             if request.data.get("preferred_language"):
                 logged_in_user.preferred_language = request.data.get(
                     "preferred_language"
