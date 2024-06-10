@@ -38,6 +38,7 @@ class UserAdmin(auth_admin.UserAdmin):
             "Avatar  info",
             {
                 "fields": (
+                    "photo",
                     "date_of_birth",
                     "gender",
                     "address",
