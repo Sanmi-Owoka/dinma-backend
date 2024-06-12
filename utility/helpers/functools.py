@@ -11,7 +11,7 @@ from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.utils import timezone
 
-from authentication.models import User
+from authentication.models import User, UserCard
 
 
 def encrypt(txt):
@@ -111,6 +111,16 @@ def decrypt_user_data(user_data: User, request) -> dict:
         photo = request.build_absolute_uri(user_data.photo.url)
     else:
         photo = None
+
+    if user_data.user_type == "patient":
+        check_user_has_card = UserCard.objects.filter(user__id=user_data.id)
+        if check_user_has_card.exists():
+            card_verified = True
+        else:
+            card_verified = False
+    else:
+        card_verified = None
+
     output_response = {
         "id": user_data.id,
         "first_name": decrypt(user_data.first_name),
@@ -127,6 +137,7 @@ def decrypt_user_data(user_data: User, request) -> dict:
         "user_type": user_data.user_type,
         "date_joined": user_data.date_joined.strftime("%d/%m/%Y, %H:%M:%S"),
         "photo": photo,
+        "card_verified": card_verified,
     }
     return output_response
 
