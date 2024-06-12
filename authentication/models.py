@@ -58,6 +58,8 @@ class User(AbstractUser):
 
     social_security_number = models.CharField(max_length=250, null=True, blank=True)
 
+    residential_zipcode = models.CharField(max_length=250, null=True, blank=True)
+
     class Meta:
         ordering = ["-date_joined"]
 
