@@ -459,6 +459,12 @@ class PractionerViewSet(GenericViewSet):
                 logged_in_user.address = encrypt(
                     request.data.get("address").lower().strip()
                 )
+
+            if request.data.get("residential_zipcode"):
+                logged_in_user.residential_zipcode = request.data.get(
+                    "residential_zipcode"
+                )
+
             if request.data.get("date_of_birth"):
                 date_of_birth = request.data.get("date_of_birth")
                 user_dob_date = datetime.datetime.strptime(
