@@ -106,6 +106,9 @@ class PractionerViewSet(GenericViewSet):
                 city=encrypt(serialized_input.validated_data["city"].capitalize()),
                 gender=serialized_input.validated_data["gender"].lower(),
                 state=serialized_input.validated_data["state"].capitalize(),
+                residential_zipcode=serialized_input.validated_data[
+                    "residential_zipcode"
+                ],
                 date_of_birth=user_dob_date,
                 preferred_communication=serialized_input.validated_data[
                     "preferred_communication"
