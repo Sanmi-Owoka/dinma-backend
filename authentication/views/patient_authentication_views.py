@@ -185,6 +185,9 @@ class PatientAuthenticationViewSet(GenericViewSet):
                 phone_number=serialized_input.validated_data["phone_number"],
                 address=encrypt(serialized_input.validated_data["address"].lower()),
                 city=encrypt(serialized_input.validated_data["city"].capitalize()),
+                residential_zipcode=serialized_input.validated_data[
+                    "residential_zipcode"
+                ],
                 gender=serialized_input.validated_data["gender"].lower(),
                 state=serialized_input.validated_data["state"].capitalize(),
                 date_of_birth=user_dob_date,
@@ -547,6 +550,11 @@ class PatientAuthenticationViewSet(GenericViewSet):
                 )
             if request.data.get("state"):
                 logged_in_user.state = request.data.get("state").capitalize().strip()
+
+            if request.data.get("residential_zipcode"):
+                logged_in_user.residential_zipcode = request.data.get(
+                    "residential_zipcode"
+                )
 
             if request.data.get("languages_spoken"):
                 if (

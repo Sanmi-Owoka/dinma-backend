@@ -35,6 +35,12 @@ class OnboardPractionerSerializer(serializers.ModelSerializer):
     gender = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
     city = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
     state = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
+
+    # added residential information
+    residential_zipcode = serializers.CharField(
+        max_length=255, trim_whitespace=True, default="000000"
+    )
+
     preferred_communication = serializers.CharField(
         required=True, max_length=255, trim_whitespace=True
     )
@@ -125,6 +131,7 @@ class OnboardPractionerSerializer(serializers.ModelSerializer):
             "gender",
             "city",
             "state",
+            "residential_zipcode",
             "preferred_communication",
             "languages_spoken",
             # practitioner credentials
@@ -399,6 +406,7 @@ class EditPractionerSerializer(serializers.ModelSerializer):
     gender = serializers.CharField(required=False, allow_blank=True)
     city = serializers.CharField(required=False, allow_blank=True)
     state = serializers.CharField(required=False, allow_blank=True)
+    residential_zipcode = serializers.CharField(required=False, allow_blank=True)
     preferred_communication = serializers.CharField(required=False, allow_blank=True)
     languages_spoken = serializers.ListField(
         allow_empty=True,
@@ -442,6 +450,7 @@ class EditPractionerSerializer(serializers.ModelSerializer):
             "gender",
             "city",
             "state",
+            "residential_zipcode",
             "preferred_communication",
             "languages_spoken",
             # practitioner credentials
