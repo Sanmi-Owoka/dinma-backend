@@ -35,6 +35,12 @@ class OnboardPractionerSerializer(serializers.ModelSerializer):
     gender = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
     city = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
     state = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
+
+    # added residential information
+    residential_zipcode = serializers.CharField(
+        max_length=255, trim_whitespace=True, default="000000"
+    )
+
     preferred_communication = serializers.CharField(
         required=True, max_length=255, trim_whitespace=True
     )

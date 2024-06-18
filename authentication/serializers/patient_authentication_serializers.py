@@ -19,6 +19,11 @@ class CreatePatientProfileSerializer(serializers.ModelSerializer):
     date_of_birth = serializers.CharField(
         max_length=150, trim_whitespace=True, default="dd-mm-YYYY"
     )
+
+    residential_zipcode = serializers.CharField(
+        max_length=255, trim_whitespace=True, default="000000"
+    )
+
     gender = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
     city = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
     state = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
@@ -56,6 +61,7 @@ class CreatePatientProfileSerializer(serializers.ModelSerializer):
             "phone_number",
             "address",
             "date_of_birth",
+            "residential_zipcode",
             "gender",
             "city",
             "state",

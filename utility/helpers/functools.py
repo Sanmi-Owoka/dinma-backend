@@ -129,6 +129,7 @@ def decrypt_user_data(user_data: User, request) -> dict:
         "phone_number": user_data.phone_number,
         "address": decrypt(user_data.address),
         "city": decrypt(user_data.city),
+        "residential_zipcode": user_data.residential_zipcode,
         "gender": user_data.gender,
         "state": user_data.state,
         "date_of_birth": user_data.date_of_birth.strftime("%d/%m/%Y"),
