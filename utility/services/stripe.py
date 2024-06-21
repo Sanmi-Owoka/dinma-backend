@@ -553,17 +553,19 @@ class StripeHelper:
         customer_id: str,
         pm_id: str,
         amount: int,
+        customer_email: str,
         currency: str = "usd",
     ):
         try:
             charge = stripe.PaymentIntent.create(
                 amount=int(amount) * 100,
                 currency=currency,
-                automatic_payment_methods={"enabled": True},
+                payment_method_types=["card"],
                 customer=str(customer_id),
                 payment_method=str(pm_id),
                 off_session=True,
                 confirm=True,
+                receipt_email=str(customer_email),
             )
 
             return {"status": True, "data": charge}
@@ -577,6 +579,33 @@ class StripeHelper:
             print("Message is: %s" % e.user_message)
 
             return {"status": False, "exception": "CardError", "message": f"{e}"}
+        except stripe.error.RateLimitError as e:
+            return {"status": False, "exception": "RateLimitError", "message": f"{e}"}
+        except stripe.error.InvalidRequestError as e:
+            return {
+                "status": False,
+                "exception": "InvalidRequestError",
+                "message": f"{e}",
+            }
+        except stripe.error.APIConnectionError as e:
+            return {
+                "status": False,
+                "exception": "APIConnectionError",
+                "message": f"{e}",
+            }
+        except stripe.error.StripeError as e:
+            return {"status": False, "exception": "StripeError", "message": f"{e}"}
+        except Exception as e:
+            return {
+                "status": False,
+                "exception": "Out of Scope Exception",
+                "message": f"{e}",
+            }
+
+    def confirm_payment_intent(self, payment_intent_id):
+        try:
+            intent = stripe.PaymentIntent.confirm(str(payment_intent_id))
+            return {"status": True, "data": intent}
         except stripe.error.RateLimitError as e:
             return {"status": False, "exception": "RateLimitError", "message": f"{e}"}
         except stripe.error.InvalidRequestError as e:

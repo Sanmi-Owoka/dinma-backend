@@ -34,6 +34,8 @@ class UserBookingDetails(BaseModel):
     date_time_of_care = models.DateTimeField(null=True, blank=True)
     reason = models.CharField(max_length=800, null=True, blank=True)
 
+    eta = models.CharField(max_length=225, null=True, blank=True)
+
 
 class UserBookingRequestTimeFrame(BaseModel):
     booking = models.ForeignKey(

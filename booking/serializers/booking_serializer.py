@@ -114,15 +114,12 @@ class ConfirmBookingSerializer(serializers.ModelSerializer):
     booking_id = serializers.CharField(
         required=True, max_length=50, trim_whitespace=True, write_only=True
     )
-    email = serializers.CharField(
-        required=True, max_length=50, trim_whitespace=True, write_only=True
-    )
+    eta = serializers.CharField(required=True, max_length=50, trim_whitespace=True)
 
     class Meta:
         model = UserBookingDetails
         fields = [
             "booking_id",
-            "email",
             "id",
             "date_care_is_needed",
             "age_of_patient",
@@ -225,3 +222,7 @@ class RescheduleBookingRequestSerializer(serializers.Serializer):
     booking_id = serializers.UUIDField(required=True)
     day_care_is_needed = serializers.DateField(required=False)
     date_time_care_is_needed = serializers.DateTimeField(required=False)
+
+
+class MakeBookingRequestSerializer(serializers.Serializer):
+    booking_id = serializers.UUIDField(required=True)
