@@ -33,6 +33,7 @@ from booking.serializers.booking_serializer import (  # GetProviderBookingSerial
     ConfirmBookingSerializer,
     CreateBookingSerializer,
     ListUserBookingsSerializer,
+    MakeBookingRequestSerializer,
     RejectBookingSerializer,
     RescheduleBookingRequestSerializer,
 )
@@ -399,10 +400,11 @@ class BookingViewSet(GenericViewSet):
         detail=False,
         url_name="accept_booking_request",
         serializer_class=ConfirmBookingSerializer,
-        permission_classes=[AllowAny],
     )
     def accept_booking_request(self, request):
         try:
+            user = User.objects.get(id=request.user.id)
+
             serialized_input = self.get_serializer(data=request.data)
             if not serialized_input.is_valid():
                 return Response(
@@ -410,20 +412,14 @@ class BookingViewSet(GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            user_email = serialized_input.validated_data.get("email")
-            user = User.objects.filter(email=user_email)
-            if not user.exists():
-                return Response(
-                    convert_to_error_message(f"No user found with email {user_email}"),
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            user = user.first()
-
             booking_id = serialized_input.validated_data.get("booking_id")
 
             booking_details = UserBookingDetails.objects.filter(id=booking_id)
             if not booking_details.exists():
-                return HttpResponse("<h1>No booking found with id</h1>")
+                return Response(
+                    convert_to_error_message(f"No booking found with id {booking_id}"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             booking_details = booking_details.first()
             if booking_details.status != "pending":
@@ -527,12 +523,10 @@ class BookingViewSet(GenericViewSet):
         detail=False,
         url_name="reject_booking_request",
         serializer_class=RejectBookingSerializer,
-        permission_classes=[AllowAny],
     )
     def reject_booking_request(self, request):
         try:
-            user_email = request.GET.get("email")
-            user = User.objects.get(email=user_email)
+            user = User.objects.get(id=request.user.id)
             booking_id = request.GET.get("booking_id")
 
             booking_details = UserBookingDetails.objects.filter(id=booking_id)
@@ -1088,6 +1082,43 @@ class BookingViewSet(GenericViewSet):
                 status=status.HTTP_200_OK,
             )
 
+        except Exception as err:
+            return Response(
+                convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(
+        methods=["POST"],
+        detail=False,
+        url_name="Make booking payment",
+        serializer_class=MakeBookingRequestSerializer,
+    )
+    def make_booking_payment(self, request):
+        try:
+            logged_in_user = User.objects.get(id=request.user.id)
+            if logged_in_user.user_type != "health_provider":
+                return Response(
+                    convert_to_error_message(
+                        "user is not authorized for this function"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            serialized_input = self.get_serializer(data=request.data)
+            if not serialized_input.is_valid():
+                return Response(
+                    convert_to_error_message(serialized_input.errors),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            booking_id = serialized_input.validated_data["booking_id"]
+            booking_details = UserBookingDetails.objects.filter(
+                practitioner=logged_in_user, booking_id=booking_id
+            )
+            if not booking_details.exists():
+                return Response(
+                    convert_to_error_message(f"No booking found with id {booking_id}"),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            booking_details = booking_details.first()
         except Exception as err:
             return Response(
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
