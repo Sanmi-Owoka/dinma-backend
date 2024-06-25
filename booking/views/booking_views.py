@@ -46,6 +46,7 @@ from utility.helpers.functools import (  # decrypt_simple_data,; decrypt_user_da
     paginate,
     success_booking_response,
 )
+from utility.services.stripe import StripeHelper
 
 
 @extend_schema(tags=["Booking endpoints"])
@@ -1119,6 +1120,41 @@ class BookingViewSet(GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             booking_details = booking_details.first()
+
+            # Check if patient has a card
+            patient = booking_details.patient
+            user_card = UserCard.objects.filter(user=patient)
+            if not user_card.exists():
+                return Response(
+                    convert_to_error_message(
+                        f"Patient {patient.first_name} {patient.last_name} does not have a card"
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user_card = user_card.first()
+
+            # Charge Patient Card
+            charge_card = StripeHelper.charge_payment_method(
+                customer_id=patient.id,
+                customer_email=patient.email,
+                pm_id=user_card.payment_method_id,
+                amount=booking_details.price_per_consultation,
+                currency="usd",
+            )
+            if not charge_card["status"]:
+                return Response(
+                    convert_to_error_message(charge_card["message"]),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            booking_details.status = "succeeded"
+            booking_details.save()
+            return Response(
+                convert_to_success_message_serialized_data(
+                    ListUserBookingsSerializer(booking_details)
+                ),
+                status=status.HTTP_200_OK,
+            )
         except Exception as err:
             return Response(
                 convert_to_error_message(f"{err}"), status=status.HTTP_400_BAD_REQUEST
