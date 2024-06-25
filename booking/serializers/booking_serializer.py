@@ -121,6 +121,7 @@ class ConfirmBookingSerializer(serializers.ModelSerializer):
         fields = [
             "booking_id",
             "id",
+            "eta",
             "date_care_is_needed",
             "age_of_patient",
             "zipcode",
