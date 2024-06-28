@@ -21,7 +21,7 @@ class UserBookingDetailsAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     ]
-    search_fields = ["patient__email", "practitioner__email"]
+    search_fields = ["patient__email", "practitioner__email", "id"]
 
 
 @admin.register(GeneralBookingDetails)

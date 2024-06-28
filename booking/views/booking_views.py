@@ -528,7 +528,8 @@ class BookingViewSet(GenericViewSet):
     def reject_booking_request(self, request):
         try:
             user = User.objects.get(id=request.user.id)
-            booking_id = request.GET.get("booking_id")
+            booking_id = request.data["booking_id"]
+            reason = request.data["reason"]
 
             booking_details = UserBookingDetails.objects.filter(id=booking_id)
             if not booking_details.exists():
@@ -557,7 +558,6 @@ class BookingViewSet(GenericViewSet):
             patient = booking_details.patient
             fullname = f"{patient.first_name} {patient.last_name}"
             date_time_of_care = booking_details.date_time_of_care
-            reason = "Provider Unavailable"
 
             booking_details.status = "rejected"
             booking_details.reason = reason
