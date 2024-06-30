@@ -207,6 +207,8 @@ class ListUserBookingsSerializer(serializers.ModelSerializer):
                 "email": instance.practitioner.email,
                 "gender": instance.practitioner.gender,
                 "title": criteria.practice_name,
+                "residential_zipcode": instance.practitioner.residential_zipcode,
+                "address": decrypt(instance.practitioner.address),
             }
             if instance.practitioner.photo:
                 provider["photo"] = instance.practitioner.photo.url
